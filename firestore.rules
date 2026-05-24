@@ -1,0 +1,41 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isNewsOpsAdmin() {
+      return request.auth != null
+        && request.auth.token.email in ["vvhoangvn@gmail.com"];
+    }
+
+    match /news/{newsId} {
+      // Development rules for the Spark/free RSS dashboard:
+      // local firebase-admin scripts bypass rules and can write.
+      // Lock reads to authenticated users before public production use.
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /rss_sources/{sourceId} {
+      allow read, write: if isNewsOpsAdmin();
+    }
+
+    match /watch_sources/{sourceId} {
+      allow read, write: if isNewsOpsAdmin();
+    }
+
+    match /ops_requests/{requestId} {
+      // Queue for News Ops actions. VPS/admin scripts can process these.
+      allow read, write: if isNewsOpsAdmin();
+    }
+
+    match /watcher_logs/{logId} {
+      // Optional watcher log stream for the News Ops page.
+      allow read: if isNewsOpsAdmin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

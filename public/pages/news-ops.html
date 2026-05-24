@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>new24h News Ops</title>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script>
+    window.NEW24H_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAUe8yrOLxAabvLx6thP4rpt2mgg-PzU3Q",
+      authDomain: "rsstin24h.firebaseapp.com",
+      projectId: "rsstin24h",
+      storageBucket: "rsstin24h.firebasestorage.app",
+      messagingSenderId: "515043893819",
+    };
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b14;
+      --panel: #101827;
+      --panel-2: #0d1422;
+      --border: rgba(148, 163, 184, 0.22);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding: 18px;
+    }
+    .shell { max-width: 1500px; margin: 0 auto; }
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    h1 { margin: 0; font-size: 1.45rem; line-height: 1.15; }
+    h2 {
+      margin: 0 0 10px;
+      color: #dbeafe;
+      font-size: 0.86rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    a { color: #7dd3fc; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button, input, select, textarea {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.84rem;
+    }
+    button { min-height: 30px; padding: 0 10px; cursor: pointer; }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    input, select { min-height: 32px; padding: 0 9px; width: 100%; }
+    textarea { width: 100%; min-height: 132px; padding: 9px; resize: vertical; }
+    option { background: #111827; color: var(--text); }
+    .subtext, .status, .meta, .empty { color: var(--muted); font-size: 0.8rem; line-height: 1.45; }
+    .status { text-align: right; }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(16, 24, 39, 0.94);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+      align-items: center;
+    }
+    .grid .wide { grid-column: span 2; }
+    .grid .full { grid-column: 1 / -1; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
+    .primary { border-color: rgba(56, 189, 248, 0.55); background: rgba(56, 189, 248, 0.14); }
+    .danger { border-color: rgba(239, 68, 68, 0.45); background: rgba(239, 68, 68, 0.12); }
+    .good { border-color: rgba(34, 197, 94, 0.42); background: rgba(34, 197, 94, 0.11); }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 999px;
+      padding: 2px 7px;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.72);
+      font-size: 0.72rem;
+      white-space: nowrap;
+    }
+    .pill.ok { color: #bbf7d0; border-color: rgba(34, 197, 94, 0.42); background: rgba(34, 197, 94, 0.12); }
+    .pill.fail { color: #fecaca; border-color: rgba(239, 68, 68, 0.46); background: rgba(239, 68, 68, 0.13); }
+    .pill.warn { color: #fde68a; border-color: rgba(245, 158, 11, 0.44); background: rgba(245, 158, 11, 0.13); }
+    .table-wrap { overflow-x: auto; border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 8px; }
+    table { width: 100%; min-width: 980px; border-collapse: collapse; font-size: 0.78rem; }
+    th, td { border-bottom: 1px solid rgba(148, 163, 184, 0.12); padding: 7px 8px; text-align: left; vertical-align: top; }
+    th { color: #cbd5e1; background: rgba(15, 23, 42, 0.86); position: sticky; top: 0; z-index: 1; }
+    td.url { max-width: 260px; overflow-wrap: anywhere; color: var(--muted); }
+    td.actions-cell { min-width: 290px; }
+    .compact-actions { display: flex; flex-wrap: wrap; gap: 5px; }
+    .compact-actions button { min-height: 25px; padding: 0 7px; font-size: 0.74rem; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .stat {
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 9px;
+    }
+    .stat span { color: var(--muted); font-size: 0.72rem; }
+    .stat strong { display: block; margin-top: 3px; font-size: 1.05rem; }
+    .lock {
+      max-width: 620px;
+      margin: 12vh auto 0;
+      border: 1px solid rgba(245, 158, 11, 0.32);
+      border-radius: 10px;
+      background: rgba(245, 158, 11, 0.08);
+      padding: 18px;
+    }
+    .hidden { display: none !important; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .samples { margin: 0; padding-left: 18px; color: #cbd5e1; }
+    .samples li { margin-bottom: 4px; }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid .wide { grid-column: 1 / -1; }
+      .two-col { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      body { padding: 12px; }
+      .grid { grid-template-columns: 1fr; }
+      header { display: block; }
+      .status { margin-top: 6px; text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <main id="lock" class="lock hidden">
+    <h1>News Ops bị khóa</h1>
+    <p class="subtext">Trang này dành cho vận hành nguồn tin. Đăng nhập bằng tài khoản admin để mở Source Manager và Bulk Tester.</p>
+    <div class="actions">
+      <button id="signin-button" class="primary" type="button">Đăng nhập Google</button>
+      <button id="signout-button" type="button">Đăng xuất</button>
+    </div>
+    <p id="auth-status" class="subtext"></p>
+  </main>
+
+  <main id="app" class="shell hidden">
+    <header>
+      <div>
+        <h1>new24h News Ops</h1>
+        <p class="subtext">Source manager, bulk tester, watcher/analyzer operations.</p>
+      </div>
+      <div class="status">
+        <div id="status">Đang khởi tạo...</div>
+        <a href="/">Mở dashboard public</a>
+      </div>
+    </header>
+
+    <section class="stats-grid" id="ops-stats"></section>
+
+    <section class="panel">
+      <h2>A. Source Manager</h2>
+      <div class="grid">
+        <input id="source-name" placeholder="Tên nguồn">
+        <input id="source-url" class="wide" type="url" placeholder="URL RSS/category">
+        <select id="source-type">
+          <option value="rss">rss</option>
+          <option value="category">category</option>
+        </select>
+        <input id="source-category" placeholder="category">
+        <input id="source-sector" placeholder="sector">
+        <select id="source-priority">
+          <option value="high">high</option>
+          <option value="normal">normal</option>
+          <option value="low">low</option>
+        </select>
+        <input id="source-interval" type="number" min="30" step="30" placeholder="intervalSeconds">
+        <select id="source-parser">
+          <option value="generic">generic</option>
+          <option value="generic_scored_category">generic_scored_category</option>
+          <option value="rss">rss</option>
+          <option value="html">html</option>
+          <option value="hose">hose</option>
+          <option value="parser_24h">parser_24h</option>
+          <option value="cafef">cafef</option>
+          <option value="vietstock">vietstock</option>
+          <option value="parser_custom">parser_custom</option>
+        </select>
+        <label class="pill"><input id="source-allow" type="checkbox" checked> allowCrawl</label>
+        <label class="pill"><input id="source-active" type="checkbox" checked> active</label>
+      </div>
+      <div class="actions">
+        <button id="save-source" class="primary">Lưu nguồn</button>
+        <button id="reset-source">Reset form</button>
+        <button id="test-current-source">Test nguồn đang nhập</button>
+        <button id="force-current-source">Force refresh</button>
+      </div>
+      <p id="source-status" class="meta"></p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th><th>URL</th><th>Type</th><th>Active</th><th>Priority</th><th>Interval</th><th>Parser</th><th>Allow</th>
+              <th>Next fetch</th><th>Last checked</th><th>Last new</th><th>Status</th><th>Errors</th><th>HTTP</th><th>Blocked</th><th>Quality</th><th>Error</th><th>Checked</th><th>Saved</th><th>Duplicate</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sources-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>B. Bulk Source Tester</h2>
+      <div class="two-col">
+        <div>
+          <textarea id="bulk-urls" placeholder="Dán nhiều URL, mỗi URL một dòng"></textarea>
+          <div class="actions">
+            <select id="bulk-type" style="max-width:170px">
+              <option value="auto">auto-detect</option>
+              <option value="rss">rss</option>
+              <option value="category">category</option>
+            </select>
+            <button id="bulk-test" class="primary">Test</button>
+            <button id="add-all-ok" class="good">Thêm tất cả OK</button>
+            <button id="copy-failed">Copy failed URLs</button>
+          </div>
+          <p id="bulk-status" class="meta"></p>
+        </div>
+        <div id="current-preview" class="panel" style="margin:0">
+          <h2>Parser Preview</h2>
+          <div class="empty">Chưa có kết quả test.</div>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-top:10px">
+        <table>
+          <thead>
+            <tr><th>URL</th><th>Detect</th><th>Status</th><th>Items</th><th>Sample titles</th><th>Error</th><th>Parser</th><th>Duration</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="bulk-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>C. Watcher Logs / Source Statistics</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Source</th><th>checked</th><th>saved</th><th>duplicate</th><th>failed</th><th>lastIntervalMs</th><th>nextFetchAt</th><th>fingerprintChanged</th><th>newItemsFound</th><th>lastCheckedAt</th><th>lastNewAt</th><th>domainStatus</th><th>lastHttpStatus</th><th>blockedReason</th><th>parserQuality</th><th>lastError</th></tr></thead>
+          <tbody id="logs-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>D. Analyzer Ops</h2>
+      <div class="actions">
+        <button data-op="reanalyze_all" class="primary">Reanalyze all</button>
+        <button data-op="reanalyze_selected">Reanalyze selected</button>
+        <button data-op="cluster_rebuild">Cluster rebuild</button>
+        <button data-op="noise_review">Noise review</button>
+        <button data-op="force_refresh_all">Force refresh all active sources</button>
+      </div>
+      <p id="ops-status" class="meta">Các nút này tạo yêu cầu trong <code>ops_requests</code>; VPS/watcher có thể đọc để chạy tác vụ nặng.</p>
+      <div class="stats-grid" id="intelligence-stats"></div>
+    </section>
+
+    <section class="panel">
+      <h2>E. Duplicate / Cluster View</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>clusterId</th><th>duplicateCount</th><th>sources</th><th>merged titles</th><th>score</th></tr></thead>
+          <tbody id="clusters-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const ALLOWED_ADMIN_EMAILS = [
+      "vvhoangvn@gmail.com",
+    ];
+    let appStarted = false;
+
+    const state = {
+      sources: [],
+      news: [],
+      editingId: null,
+      bulkResults: [],
+    };
+    let db;
+
+    function ensureFirebaseInitialized(requireAuth = false) {
+      if (!window.firebase || !firebase.firestore || (requireAuth && !firebase.auth)) return false;
+      if (!firebase.apps.length) {
+        firebase.initializeApp(window.NEW24H_FIREBASE_CONFIG);
+      }
+      return true;
+    }
+
+    const $ = (id) => document.getElementById(id);
+    const els = {
+      status: $("status"),
+      stats: $("ops-stats"),
+      sourcesBody: $("sources-body"),
+      logsBody: $("logs-body"),
+      clustersBody: $("clusters-body"),
+      intelligenceStats: $("intelligence-stats"),
+      sourceStatus: $("source-status"),
+      bulkStatus: $("bulk-status"),
+      bulkBody: $("bulk-body"),
+      preview: $("current-preview"),
+      opsStatus: $("ops-status"),
+    };
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
+      })[char]);
+    }
+
+    function stripHtml(value) {
+      return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function toDate(value) {
+      if (!value) return null;
+      if (typeof value.toDate === "function") return value.toDate();
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
+    function formatTime(value) {
+      const date = toDate(value);
+      return date ? date.toLocaleString("vi-VN", {hour12: false}) : "-";
+    }
+
+    function formatDurationMs(value) {
+      const ms = Number(value || 0);
+      if (!ms) return "-";
+      const totalSeconds = Math.round(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      return `${minutes}m${String(seconds).padStart(2, "0")}s`;
+    }
+
+    function qualityPercent(value) {
+      if (value === null || value === undefined) return null;
+      if (typeof value === "object") return Number(value.qualityPercent ?? 0);
+      return Number(value);
+    }
+
+    function hostName(url) {
+      try {
+        return new URL(url).hostname.replace(/^www\./, "");
+      } catch {
+        return "";
+      }
+    }
+
+    function detectParserType(url, type) {
+      const host = hostName(url);
+      if (/24h\.com\.vn$/i.test(host)) return "parser_24h";
+      if (/hsx|hose/i.test(host)) return "hose";
+      if (/cafef/i.test(host)) return "cafef";
+      if (/vietstock/i.test(host)) return "vietstock";
+      if (type === "rss") return "rss";
+      return type === "category" || type === "auto" ? "generic_scored_category" : "generic";
+    }
+
+    function sourcePayloadFromForm() {
+      const url = $("source-url").value.trim();
+      return {
+        name: $("source-name").value.trim() || hostName(url) || "Nguồn tin",
+        url,
+        type: $("source-type").value,
+        category: $("source-category").value.trim() || "market",
+        sector: $("source-sector").value.trim() || "other",
+        priority: $("source-priority").value,
+        intervalSeconds: Number($("source-interval").value || 120),
+        parserType: $("source-parser").value || detectParserType(url, $("source-type").value),
+        allowCrawl: $("source-allow").checked,
+        active: $("source-active").checked,
+      };
+    }
+
+    function fillSourceForm(source) {
+      state.editingId = source.id || null;
+      $("source-name").value = source.name || "";
+      $("source-url").value = source.url || "";
+      $("source-type").value = source.type || "rss";
+      $("source-category").value = source.category || "";
+      $("source-sector").value = source.sector || "";
+      $("source-priority").value = source.priority || "normal";
+      $("source-interval").value = source.intervalSeconds || "";
+      $("source-parser").value = source.parserType || "generic";
+      $("source-allow").checked = source.allowCrawl !== false;
+      $("source-active").checked = source.active !== false;
+      $("save-source").textContent = state.editingId ? "Cập nhật nguồn" : "Lưu nguồn";
+    }
+
+    function resetSourceForm() {
+      state.editingId = null;
+      fillSourceForm({type: "rss", priority: "normal", parserType: "generic", allowCrawl: true, active: true, intervalSeconds: 120});
+      $("save-source").textContent = "Lưu nguồn";
+      els.sourceStatus.textContent = "";
+    }
+
+    function xmlText(node, selectors) {
+      for (const selector of selectors) {
+        const found = node.querySelector(selector);
+        if (found && found.textContent) return found.textContent.trim();
+      }
+      return "";
+    }
+
+    function parseRss(text, baseUrl, limit = 20) {
+      const doc = new DOMParser().parseFromString(text, "text/xml");
+      if (doc.querySelector("parsererror")) return {items: [], error: "invalid_rss"};
+      const entries = Array.from(doc.querySelectorAll("item, entry")).slice(0, limit);
+      const items = entries.map((entry) => {
+        const linkEl = entry.querySelector("link");
+        const rawHref = linkEl?.getAttribute("href") || linkEl?.textContent || xmlText(entry, ["guid", "id"]);
+        let url = "";
+        try { url = rawHref ? new URL(rawHref.trim(), baseUrl).href : ""; } catch {}
+        return {
+          title: stripHtml(xmlText(entry, ["title"]) || url),
+          url,
+        };
+      }).filter((item) => item.title || item.url);
+      return {items, error: items.length ? null : "no_items_found"};
+    }
+
+    function cleanHeadline(value) {
+      return stripHtml(value)
+        .replace(/\b(Image|Video|Advertisement|APP 24h)\b/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function isMarketWidgetText(title) {
+      const normalized = title.toLowerCase();
+      const numberParts = (title.match(/\d[\d.,%]*/g) || []).length;
+      return numberParts >= 5
+        || /vn-?index|vn30|hastc|upcom|giá vàng sjc|ty gia|tỷ giá|usd mua|usd bán|mua\s+\d|bán\s+\d|xăng|lịch|đăng nhập/i.test(normalized);
+    }
+
+    function isNavigationText(title) {
+      const normalized = title.toLowerCase();
+      const navWords = [
+        "tin tức", "bóng đá", "kinh doanh", "giải trí", "sức khỏe", "hi-tech", "thế giới",
+        "thể thao", "ô tô", "phong thủy", "xem thêm", "facebook", "zalo", "copy link",
+        "gửi góp ý", "liên hệ quảng cáo", "chính sách bảo mật", "tuyển dụng",
+      ];
+      return navWords.includes(normalized);
+    }
+
+    function isLikelyArticleUrl(url, baseUrl, parserType) {
+      let parsed;
+      let base;
+      try {
+        parsed = new URL(url, baseUrl);
+        base = new URL(baseUrl);
+      } catch {
+        return false;
+      }
+      if (!/^https?:$/.test(parsed.protocol)) return false;
+      if (parsed.hostname !== base.hostname && !parsed.hostname.endsWith(`.${base.hostname}`)) return false;
+      const path = parsed.pathname.toLowerCase();
+      if (/\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf)$/i.test(path)) return false;
+      if (/\/(tag|tags|video|photo|login|dang-nhap|lien-he|gioi-thieu|chinh-sach|tuyen-dung)(\/|$)/i.test(path)) return false;
+      if (parserType === "parser_24h") {
+        return /(?:-c\d+a\d+|-d\d+)\.html$/i.test(path) || (/\.html$/i.test(path) && !/-c\d+\.html$/i.test(path));
+      }
+      return /\.html?$/i.test(path) || /\/\d{4}\/\d{1,2}\//.test(path) || /\/(news|tin|bai-viet|article)\//i.test(path);
+    }
+
+    function isCategoryUrl(url, baseUrl) {
+      try {
+        const parsed = new URL(url, baseUrl);
+        const path = parsed.pathname.toLowerCase();
+        return /\/(tag|tags|search|category|cate|page|video|photo)(\/|$)/i.test(path)
+          || /-c\d+\.html$/i.test(path)
+          || /[?&](q|keyword|page)=/i.test(parsed.search);
+      } catch {
+        return true;
+      }
+    }
+
+    function isOffTopicTitle(title, baseUrl) {
+      if (!/ngan-hang|tai-chinh|kinh-doanh|chung-khoan/i.test(baseUrl)) return false;
+      return /\b(bóng đá|bong da|phong thủy|phong thuy|giải trí|giai tri|hoa hậu|showbiz|bikini|mỹ nhân|my nhan|xổ số|xo so)\b/i.test(title);
+    }
+
+    function normalizedTitleKey(title) {
+      return stripHtml(title).toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function scoreCategoryCandidate(candidate, baseUrl, parserType, seen, seenTitles) {
+      const title = cleanHeadline(candidate.title);
+      const url = candidate.url;
+      let score = 0;
+      const reasons = [];
+      if (url && isLikelyArticleUrl(url, baseUrl, parserType)) score += 30;
+      else {
+        score -= 30;
+        reasons.push("url");
+      }
+      if (title.length >= 20 && title.length <= 160) score += 25;
+      else if (title.length < 10) {
+        score -= 40;
+        reasons.push("short");
+      } else if (title.length < 20) {
+        score -= 12;
+        reasons.push("short");
+      }
+      if (/[-/][a-z0-9-]{10,}\.html?$/i.test(url) || /(?:-c\d+a\d+|-d\d+)\.html$/i.test(url)) score += 20;
+      if (/(h1|h2|h3|article|news-item|story|post|media|item|list-news)/i.test(candidate.selectorHint || "")) score += 15;
+      if (candidate.positionIndex < 12) score += 10;
+      if (/\b(\d{1,2}\/\d{1,2}\/\d{4}|\d{1,2}:\d{2}|phút trước|giờ trước)\b/i.test(candidate.containerText || "")) score += 10;
+      if (/\b(ngân hàng|lãi suất|tín dụng|doanh nghiệp|cổ phiếu|thị trường|lợi nhuận|dự án|đầu tư|trái phiếu|tỷ đồng)\b/i.test(title)) score += 10;
+      if (/nav|menu|footer|sidebar|right|header/i.test(candidate.selectorHint || "")) {
+        score -= 50;
+        reasons.push("menu");
+      }
+      if (isNavigationText(title)) {
+        score -= 40;
+        reasons.push("menu");
+      }
+      if (isMarketWidgetText(title)) {
+        score -= 35;
+        reasons.push("widget");
+      }
+      if (isCategoryUrl(url, baseUrl)) {
+        score -= 30;
+        reasons.push("url");
+      }
+      const titleKey = normalizedTitleKey(title);
+      if (seen.has(url) || seenTitles.has(titleKey)) {
+        score -= 25;
+        reasons.push("duplicate");
+      }
+      if (isOffTopicTitle(title, baseUrl)) {
+        score -= 20;
+        reasons.push("off_topic");
+      }
+      return {score: Math.max(0, Math.min(100, score)), reasons, title, titleKey};
+    }
+
+    function headlineScore(title, url, baseUrl, parserType) {
+      const clean = cleanHeadline(title);
+      if (!clean || clean.length < 20 || clean.length > 220) return 0;
+      if (!isLikelyArticleUrl(url, baseUrl, parserType)) return 0;
+      if (isNavigationText(clean) || isMarketWidgetText(clean)) return 0;
+      let score = 40;
+      if (/[?!.:]$/.test(clean) || clean.split(/\s+/).length >= 7) score += 15;
+      if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(clean)) score += 12;
+      if (/\b(ngân hàng|lãi suất|tín dụng|doanh nghiệp|cổ phiếu|thị trường|lợi nhuận|dự án|đầu tư|trái phiếu|tỷ đồng)\b/i.test(clean)) score += 10;
+      if ((clean.match(/\d/g) || []).length > clean.length * 0.28) score -= 25;
+      return Math.max(0, Math.min(100, score));
+    }
+
+    function removeParserNoise(doc) {
+      doc.querySelectorAll([
+        "nav", "header", "footer", "aside", "script", "style", "noscript", "iframe",
+        ".sidebar", ".side-bar", ".rightcol", ".right-col", ".menu", ".nav", ".navbar",
+        ".footer", ".header", ".ads", ".ad", ".advertisement", ".banner", ".ticker",
+        ".stock", ".exchange", ".gold", ".price", ".market", ".breadcrumb", ".social",
+        "[class*='sidebar']", "[class*='right']", "[class*='menu']", "[class*='nav']",
+        "[class*='footer']", "[class*='header']", "[class*='ads']", "[class*='banner']",
+        "[class*='ticker']", "[class*='stock']", "[class*='gold']",
+      ].join(",")).forEach((node) => node.remove());
+    }
+
+    function candidateRoots(doc, parserType) {
+      const selectors = [
+        "article", ".news-item", ".story", ".post", ".media", ".list-news", ".news-list",
+        ".main-content", ".content-list", "main", "#main", "#content", ".content", ".container",
+      ];
+      if (parserType === "parser_24h") {
+        selectors.unshift(
+          ".cate-24h-content", ".cate-24h-foot-arti-detaill", ".cate-24h-foot-arti-detaill-list",
+          ".cate-24h-car-news", ".cate-list-news", ".leftcol", ".left-col", "#left"
+        );
+      }
+      const roots = selectors.flatMap((selector) => Array.from(doc.querySelectorAll(selector)));
+      return roots.length ? roots : [doc.body || doc];
+    }
+
+    function parseCategory(text, baseUrl, limit = 20) {
+      const doc = new DOMParser().parseFromString(text, "text/html");
+      const parserType = detectParserType(baseUrl, "category");
+      removeParserNoise(doc);
+      const seen = new Set();
+      const seenTitles = new Set();
+      const rejected = {menu: 0, short: 0, widget: 0, url: 0, duplicate: 0, off_topic: 0, low_quality: 0};
+      const candidates = [];
+      const roots = candidateRoots(doc, parserType);
+      const selectorCounts = new Map();
+
+      roots.forEach((root) => {
+        Array.from(root.querySelectorAll("a[href]")).forEach((anchor, positionIndex) => {
+          const title = cleanHeadline(anchor.textContent || anchor.getAttribute("title") || "");
+          let url = "";
+          try { url = new URL(anchor.getAttribute("href"), baseUrl).href; } catch {
+            rejected.url += 1;
+            return;
+          }
+          const selectorHint = `${anchor.closest("h1,h2,h3,article,.news-item,.story,.post,.media,.item,.list-news")?.tagName?.toLowerCase() || ""} ${anchor.className || ""}`.trim() || "a[href]";
+          const scored = scoreCategoryCandidate({
+            title,
+            url,
+            selectorHint,
+            positionIndex,
+            containerText: anchor.closest("article,.news-item,.story,.post,.media,.item,li,div")?.textContent?.slice(0, 260) || "",
+          }, baseUrl, parserType, seen, seenTitles);
+          if (scored.score < 40) {
+            const reason = scored.reasons[0] || "low_quality";
+            rejected[reason] = (rejected[reason] || 0) + 1;
+            candidates.push({title: scored.title, url, score: scored.score, selectorHint, rejected: true});
+            return;
+          }
+          seen.add(url);
+          seenTitles.add(scored.titleKey);
+          selectorCounts.set(selectorHint, (selectorCounts.get(selectorHint) || 0) + 1);
+          candidates.push({title: scored.title, url, score: scored.score, selectorHint});
+        });
+      });
+
+      let accepted = candidates
+        .filter((candidate) => !candidate.rejected)
+        .sort((left, right) => right.score - left.score)
+        .slice(0, limit);
+      if (!accepted.length) {
+        accepted = candidates
+          .filter((candidate) => !isNavigationText(candidate.title) && !isMarketWidgetText(candidate.title) && candidate.score >= 20)
+          .sort((left, right) => right.score - left.score)
+          .slice(0, Math.min(5, limit));
+      }
+      const items = accepted.map(({title, url, score, selectorHint}) => ({title, url, score, selectorHint}));
+
+      const rejectedCount = Object.values(rejected).reduce((sum, value) => sum + Number(value || 0), 0);
+      const tested = items.length + rejectedCount;
+      const avgScore = accepted.length ? Math.round(accepted.reduce((sum, item) => sum + item.score, 0) / accepted.length) : 0;
+      const qualityScore = tested ? Math.round((items.length / Math.max(1, tested)) * 100) : 0;
+      const parserQuality = {
+        acceptedCount: items.length,
+        rejectedCount,
+        avgScore,
+        noiseRatio: tested ? Number((rejectedCount / tested).toFixed(2)) : 0,
+        qualityPercent: qualityScore,
+        rejectReasons: rejected,
+      };
+      return {
+        items,
+        error: items.length ? null : "no_items_found",
+        qualityScore: parserQuality,
+        parserType,
+        rejected,
+        acceptedCount: items.length,
+        rejectedCount,
+        recentAcceptedSelectors: Array.from(selectorCounts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([selector, count]) => ({selector, count})),
+      };
+    }
+
+    async function fetchText(url) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      try {
+        const response = await fetch(url, {cache: "no-store", signal: controller.signal});
+        if (response.status === 403) throw new Error("blocked_403");
+        if (!response.ok) throw new Error(`fetch_failed:${response.status}`);
+        return await response.text();
+      } catch (error) {
+        if (error.name === "AbortError") throw new Error("timeout");
+        if (/Failed to fetch|NetworkError|Load failed/i.test(error.message)) throw new Error("cors_or_network_error");
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    async function testUrl(url, requestedType = "auto") {
+      const started = performance.now();
+      const result = {
+        url,
+        requestedType,
+        detectedType: requestedType,
+        status: "FAIL",
+        count: 0,
+        items: [],
+        error: "",
+        parserType: detectParserType(url, requestedType === "auto" ? "rss" : requestedType),
+        qualityScore: null,
+        rejected: null,
+        acceptedCount: 0,
+        rejectedCount: 0,
+        durationMs: 0,
+      };
+      try {
+        const text = await fetchText(url);
+        const looksRss = /^\s*(<\?xml|<rss|<feed)/i.test(text);
+        const tryRss = requestedType === "rss" || requestedType === "auto" || looksRss;
+        if (tryRss) {
+          const rss = parseRss(text, url);
+          if (rss.items.length) {
+            Object.assign(result, {detectedType: "rss", status: "OK", count: rss.items.length, items: rss.items, error: ""});
+          } else if (requestedType === "rss") {
+            result.error = rss.error || "invalid_rss";
+          }
+        }
+        if (result.status !== "OK" && requestedType !== "rss") {
+          const category = parseCategory(text, url);
+          if (category.items.length) {
+            Object.assign(result, {
+              detectedType: "category",
+              status: "OK",
+              count: category.items.length,
+              items: category.items,
+              error: "",
+              qualityScore: category.qualityScore,
+              rejected: category.rejected,
+              acceptedCount: category.acceptedCount,
+              rejectedCount: category.rejectedCount,
+              recentAcceptedSelectors: category.recentAcceptedSelectors || [],
+              parserType: category.parserType || result.parserType,
+            });
+          } else {
+            result.error = category.error || "parse_failed";
+            result.qualityScore = category.qualityScore;
+            result.rejected = category.rejected;
+            result.acceptedCount = category.acceptedCount || 0;
+            result.rejectedCount = category.rejectedCount || 0;
+            result.recentAcceptedSelectors = category.recentAcceptedSelectors || [];
+            result.parserType = category.parserType || result.parserType;
+          }
+        }
+        if (result.status !== "OK" && !result.error) result.error = "no_items_found";
+      } catch (error) {
+        result.error = error.message || "parse_failed";
+      }
+      result.durationMs = Math.round(performance.now() - started);
+      result.parserType = detectParserType(url, result.detectedType);
+      return result;
+    }
+
+    function sourceFromTest(result) {
+      return {
+        name: hostName(result.url) || result.url,
+        url: result.url,
+        type: result.detectedType === "category" ? "category" : "rss",
+        active: true,
+        category: "market",
+        sector: "other",
+        priority: "normal",
+        intervalSeconds: result.detectedType === "rss" ? 120 : null,
+        parserType: result.parserType || "generic",
+        allowCrawl: true,
+      };
+    }
+
+    async function saveSource(payload) {
+      if (!payload.url) throw new Error("Thiếu URL nguồn");
+      const docPayload = {...payload, updatedAt: firebase.firestore.FieldValue.serverTimestamp()};
+      if (state.editingId) {
+        await db.collection("watch_sources").doc(state.editingId).set(docPayload, {merge: true});
+      } else {
+        await db.collection("watch_sources").add({
+          ...docPayload,
+          status: payload.active === false ? "DISABLED" : "OK",
+          domainStatus: payload.active === false ? "DISABLED" : "OK",
+          totalChecked: 0,
+          totalSaved: 0,
+          totalDuplicate: 0,
+          totalErrors: 0,
+          errorCount: 0,
+          lastSeenUrls: [],
+          lastSeenTitles: [],
+          lastTopFingerprint: "",
+          parserQuality: null,
+          recentAcceptedSelectors: [],
+          lastCheckedAt: null,
+          lastNewAt: null,
+          lastError: null,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    async function saveSourceFromResult(result) {
+      const quality = qualityPercent(result.qualityScore);
+      const status = result.status === "OK" && quality !== null && quality < 15 ? "WARNING" : result.status;
+      await db.collection("watch_sources").add({
+        ...sourceFromTest(result),
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastTestAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastTestCount: result.count,
+        parserQuality: result.qualityScore || null,
+        parserPattern: result.parserType || "",
+        recentAcceptedSelectors: result.recentAcceptedSelectors || [],
+        status,
+        domainStatus: status,
+        totalChecked: 0,
+        totalSaved: 0,
+        totalDuplicate: 0,
+        totalErrors: 0,
+        errorCount: 0,
+        lastSeenUrls: [],
+        lastSeenTitles: [],
+        lastTopFingerprint: "",
+        lastCheckedAt: null,
+        lastNewAt: null,
+        lastError: null,
+      });
+    }
+
+    function renderPreview(result) {
+      if (!result) {
+        els.preview.innerHTML = `<h2>Parser Preview</h2><div class="empty">Chưa có kết quả test.</div>`;
+        return;
+      }
+      els.preview.innerHTML = `
+        <h2>Parser Preview</h2>
+        <div class="meta">${escapeHtml(result.detectedType)} · ${escapeHtml(result.status)} · ${escapeHtml(result.durationMs)}ms${result.qualityScore !== null ? ` · quality ${escapeHtml(result.qualityScore)}%` : ""}</div>
+        ${result.rejected ? `<p class="meta">accepted: ${escapeHtml(result.acceptedCount || result.items.length)} · rejected: ${escapeHtml(result.rejectedCount || 0)}</p>` : ""}
+        <ol class="samples">${result.items.slice(0, 8).map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></li>`).join("")}</ol>
+        ${result.rejected ? `<p class="meta">Rejected: menu ${escapeHtml(result.rejected.menu || 0)} · short ${escapeHtml(result.rejected.short || 0)} · widget ${escapeHtml(result.rejected.widget || 0)} · url ${escapeHtml(result.rejected.url || 0)} · duplicate ${escapeHtml(result.rejected.duplicate || 0)} · low_quality ${escapeHtml(result.rejected.low_quality || 0)}</p>` : ""}
+        ${result.error ? `<p class="pill fail">${escapeHtml(result.error)}</p>` : ""}
+      `;
+    }
+
+    function renderBulkResults() {
+      els.bulkBody.innerHTML = state.bulkResults.map((result, index) => `
+        <tr>
+          <td class="url">${escapeHtml(result.url)}</td>
+          <td>${escapeHtml(result.detectedType)}</td>
+          <td><span class="pill ${result.status === "OK" ? "ok" : "fail"}">${escapeHtml(result.status)}</span></td>
+          <td>${escapeHtml(result.count)}</td>
+          <td><ol class="samples">${result.items.slice(0, 3).map((item) => `<li>${escapeHtml(item.title)}</li>`).join("")}</ol></td>
+          <td>${result.error ? `<span class="pill fail">${escapeHtml(result.error)}</span>` : ""}</td>
+          <td>${escapeHtml(result.parserType)}${result.qualityScore !== null ? `<br><span class="pill ${result.qualityScore >= 20 ? "ok" : "warn"}">quality ${escapeHtml(result.qualityScore)}%</span><br><span class="meta">A:${escapeHtml(result.acceptedCount || result.items.length)} R:${escapeHtml(result.rejectedCount || 0)}</span>` : ""}</td>
+          <td>${escapeHtml(result.durationMs)}ms</td>
+          <td class="actions-cell">
+            <div class="compact-actions">
+              <button data-preview="${index}">Preview</button>
+              <button data-add-ok="${index}" ${result.status === "OK" ? "" : "disabled"}>Thêm nguồn</button>
+            </div>
+          </td>
+        </tr>
+      `).join("") || `<tr><td colspan="9" class="empty">Chưa có kết quả.</td></tr>`;
+    }
+
+    function renderPreview(result) {
+      if (!result) {
+        els.preview.innerHTML = `<h2>Parser Preview</h2><div class="empty">Chua co ket qua test.</div>`;
+        return;
+      }
+      const quality = qualityPercent(result.qualityScore);
+      const selectorText = (result.recentAcceptedSelectors || []).map((item) => `${item.selector} (${item.count})`).join(" · ");
+      els.preview.innerHTML = `
+        <h2>Parser Preview</h2>
+        <div class="meta">${escapeHtml(result.detectedType)} · ${escapeHtml(result.status)} · ${escapeHtml(result.durationMs)}ms${quality !== null ? ` · quality ${escapeHtml(quality)}%` : ""}</div>
+        ${result.rejected ? `<p class="meta">accepted: ${escapeHtml(result.acceptedCount || result.items.length)} · rejected: ${escapeHtml(result.rejectedCount || 0)}</p>` : ""}
+        <ol class="samples">${result.items.slice(0, 8).map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a> <span class="pill">score ${escapeHtml(item.score || "-")}</span><div class="meta">${escapeHtml(item.url)}</div></li>`).join("")}</ol>
+        ${result.rejected ? `<p class="meta">Rejected: menu ${escapeHtml(result.rejected.menu || 0)} · short ${escapeHtml(result.rejected.short || 0)} · widget ${escapeHtml(result.rejected.widget || 0)} · url ${escapeHtml(result.rejected.url || 0)} · duplicate ${escapeHtml(result.rejected.duplicate || 0)} · off_topic ${escapeHtml(result.rejected.off_topic || 0)} · low_quality ${escapeHtml(result.rejected.low_quality || 0)}</p>` : ""}
+        ${selectorText ? `<p class="meta">Selectors: ${escapeHtml(selectorText)}</p>` : ""}
+        ${result.error ? `<p class="pill fail">${escapeHtml(result.error)}</p>` : ""}
+      `;
+    }
+
+    function renderBulkResults() {
+      els.bulkBody.innerHTML = state.bulkResults.map((result, index) => `
+        <tr>
+          <td class="url">${escapeHtml(result.url)}</td>
+          <td>${escapeHtml(result.detectedType)}</td>
+          <td><span class="pill ${result.status === "OK" ? "ok" : "fail"}">${escapeHtml(result.status)}</span></td>
+          <td>${escapeHtml(result.count)}</td>
+          <td><ol class="samples">${result.items.slice(0, 3).map((item) => `<li>${escapeHtml(item.title)} <span class="pill">score ${escapeHtml(item.score || "-")}</span><div class="meta">${escapeHtml(item.url)}</div></li>`).join("")}</ol></td>
+          <td>${result.error ? `<span class="pill fail">${escapeHtml(result.error)}</span>` : ""}</td>
+          <td>${escapeHtml(result.parserType)}${result.qualityScore !== null ? `<br><span class="pill ${qualityPercent(result.qualityScore) >= 20 ? "ok" : "warn"}">quality ${escapeHtml(qualityPercent(result.qualityScore))}%</span><br><span class="meta">A:${escapeHtml(result.acceptedCount || result.items.length)} R:${escapeHtml(result.rejectedCount || 0)}</span>` : ""}</td>
+          <td>${escapeHtml(result.durationMs)}ms</td>
+          <td class="actions-cell">
+            <div class="compact-actions">
+              <button data-preview="${index}">Preview</button>
+              <button data-add-ok="${index}" ${result.status === "OK" ? "" : "disabled"}>Them nguon</button>
+            </div>
+          </td>
+        </tr>
+      `).join("") || `<tr><td colspan="9" class="empty">Chua co ket qua.</td></tr>`;
+    }
+
+    function renderSources() {
+      els.sourcesBody.innerHTML = state.sources.map((source) => `
+        <tr>
+          <td><strong>${escapeHtml(source.name || "Không tên")}</strong></td>
+          <td class="url">${escapeHtml(source.url || "")}</td>
+          <td>${escapeHtml(source.type || "rss")}</td>
+          <td><span class="pill ${source.active !== false ? "ok" : "warn"}">${escapeHtml(source.active !== false ? "on" : "off")}</span></td>
+          <td>${escapeHtml(source.priority || "normal")}</td>
+          <td>${escapeHtml(source.intervalSeconds || "-")}</td>
+          <td>${escapeHtml(source.parserType || "generic")}</td>
+          <td>${escapeHtml(source.allowCrawl === false ? "false" : "true")}</td>
+          <td>${escapeHtml(formatDurationMs(source.lastIntervalMs))}</td>
+          <td>${escapeHtml(formatTime(source.nextFetchAt || source.nextCheckAt))}</td>
+          <td>${source.fingerprintChanged === true ? "true" : source.fingerprintChanged === false ? "false" : "-"}</td>
+          <td>${escapeHtml(source.newItemsFound || 0)}</td>
+          <td>${escapeHtml(formatTime(source.lastCheckedAt))}</td>
+          <td>${escapeHtml(formatTime(source.lastNewAt))}</td>
+          <td><span class="pill ${source.domainStatus === "OK" ? "ok" : source.domainStatus === "FAIL" ? "fail" : "warn"}">${escapeHtml(source.domainStatus || (source.active === false ? "DISABLED" : "OK"))}</span></td>
+          <td>${escapeHtml(source.consecutiveErrors || 0)}</td>
+          <td>${escapeHtml(source.lastHttpStatus || "-")}</td>
+          <td>${escapeHtml(source.blockedReason || "-")}</td>
+          <td>${source.parserQuality !== null && source.parserQuality !== undefined ? `${escapeHtml(qualityPercent(source.parserQuality))}%` : "-"}</td>
+          <td>${source.lastError ? `<span class="pill fail">${escapeHtml(source.lastError)}</span>` : ""}</td>
+          <td>${escapeHtml(source.totalChecked || 0)}</td>
+          <td>${escapeHtml(source.totalSaved || 0)}</td>
+          <td>${escapeHtml(source.totalDuplicate || source.duplicateCount || 0)}</td>
+          <td class="actions-cell">
+            <div class="compact-actions">
+              <button data-edit="${escapeHtml(source.id)}">Edit</button>
+              <button data-toggle="${escapeHtml(source.id)}" data-active="${source.active === false ? "true" : "false"}">${source.active === false ? "Enable" : "Disable"}</button>
+              <button data-test="${escapeHtml(source.id)}">Test</button>
+              <button data-force="${escapeHtml(source.id)}">Force refresh</button>
+              <button class="danger" data-delete="${escapeHtml(source.id)}">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join("") || `<tr><td colspan="15" class="empty">Chưa có nguồn trong watch_sources.</td></tr>`;
+      renderStats();
+      renderLogs();
+    }
+
+    function renderStats() {
+      const active = state.sources.filter((source) => source.active !== false).length;
+      const checked = state.sources.reduce((sum, source) => sum + Number(source.totalChecked || 0), 0);
+      const saved = state.sources.reduce((sum, source) => sum + Number(source.totalSaved || 0), 0);
+      const dup = state.sources.reduce((sum, source) => sum + Number(source.totalDuplicate || source.duplicateCount || 0), 0);
+      const errors = state.sources.filter((source) => source.lastError).length;
+      els.stats.innerHTML = [
+        ["Nguồn", state.sources.length],
+        ["Đang bật", active],
+        ["Checked", checked],
+        ["Saved", saved],
+        ["Duplicate", dup],
+        ["Source errors", errors],
+      ].map(([label, value]) => `<div class="stat"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+    }
+
+    function renderLogs() {
+      els.logsBody.innerHTML = state.sources.map((source) => `
+        <tr>
+          <td>${escapeHtml(source.name || source.url || source.id)}</td>
+          <td>${escapeHtml(source.totalChecked || 0)}</td>
+          <td>${escapeHtml(source.totalSaved || 0)}</td>
+          <td>${escapeHtml(source.totalDuplicate || 0)}</td>
+          <td>${escapeHtml(source.lastError ? 1 : 0)}</td>
+          <td>${escapeHtml(formatDurationMs(source.lastIntervalMs))}</td>
+          <td>${escapeHtml(formatTime(source.nextFetchAt || source.nextCheckAt))}</td>
+          <td>${source.fingerprintChanged === true ? "true" : source.fingerprintChanged === false ? "false" : ""}</td>
+          <td>${escapeHtml(source.newItemsFound || 0)}</td>
+          <td>${escapeHtml(formatTime(source.lastCheckedAt))}</td>
+          <td>${escapeHtml(formatTime(source.lastNewAt))}</td>
+          <td>${escapeHtml(source.domainStatus || "")}</td>
+          <td>${escapeHtml(source.lastHttpStatus || "")}</td>
+          <td>${escapeHtml(source.blockedReason || "")}</td>
+          <td>${source.parserQuality !== null && source.parserQuality !== undefined ? `${escapeHtml(qualityPercent(source.parserQuality))}%` : ""}</td>
+          <td>${escapeHtml(source.lastError || "")}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="8" class="empty">Chưa có source statistics.</td></tr>`;
+    }
+
+    function renderNewsOps() {
+      const sectorMap = new Map();
+      const tickerMap = new Map();
+      const keywordMap = new Map();
+      const clusters = state.news
+        .filter((item) => Number(item.duplicateCount || 1) > 1 || item.clusterId)
+        .sort((a, b) => Number(b.duplicateCount || 1) - Number(a.duplicateCount || 1))
+        .slice(0, 30);
+
+      state.news.forEach((item) => {
+        const sector = item.sector || "other";
+        sectorMap.set(sector, (sectorMap.get(sector) || 0) + Number(item.impactScore || 0));
+        (Array.isArray(item.relatedStocks) ? item.relatedStocks : []).forEach((ticker) => {
+          tickerMap.set(ticker, (tickerMap.get(ticker) || 0) + 1);
+        });
+        (Array.isArray(item.keywords) ? item.keywords : []).forEach((keyword) => {
+          keywordMap.set(keyword, (keywordMap.get(keyword) || 0) + 1);
+        });
+      });
+
+      const top = (map) => Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8)
+        .map(([key, value]) => `${key} (${Math.round(value)})`).join(" · ") || "-";
+      els.intelligenceStats.innerHTML = `
+        <div class="stat"><span>Top sectors</span><strong>${escapeHtml(top(sectorMap))}</strong></div>
+        <div class="stat"><span>Top tickers</span><strong>${escapeHtml(top(tickerMap))}</strong></div>
+        <div class="stat"><span>Hot keywords</span><strong>${escapeHtml(top(keywordMap))}</strong></div>
+      `;
+
+      els.clustersBody.innerHTML = clusters.map((item) => `
+        <tr>
+          <td class="url">${escapeHtml(item.clusterId || "-")}</td>
+          <td>${escapeHtml(item.duplicateCount || 1)}</td>
+          <td>${escapeHtml(Array.isArray(item.sources) ? item.sources.join(", ") : item.source || "")}</td>
+          <td>${escapeHtml(item.clusterTitle || item.title || "")}</td>
+          <td>${escapeHtml(item.impactScore || item.finalScore || 0)}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="5" class="empty">Chưa có cụm duplicate trong 100 tin mới nhất.</td></tr>`;
+    }
+
+    async function requestOp(type) {
+      await db.collection("ops_requests").add({
+        type,
+        status: "queued",
+        requestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        requestedBy: "news-ops-static",
+      });
+      els.opsStatus.textContent = `Đã tạo ops request: ${type}. VPS/watcher cần đọc ops_requests để thực thi.`;
+    }
+
+    async function forceRefresh(id) {
+      await db.collection("watch_sources").doc(id).set({
+        forceRefreshAt: firebase.firestore.FieldValue.serverTimestamp(),
+        nextFetchAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() - 1000)),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, {merge: true});
+      els.sourceStatus.textContent = "Đã đánh dấu force refresh cho nguồn.";
+    }
+
+    function bindEvents() {
+      $("save-source").addEventListener("click", async () => {
+        try {
+          await saveSource(sourcePayloadFromForm());
+          resetSourceForm();
+          els.sourceStatus.textContent = "Đã lưu nguồn vào watch_sources.";
+        } catch (error) {
+          els.sourceStatus.textContent = `Không lưu được nguồn: ${error.message}`;
+        }
+      });
+      $("reset-source").addEventListener("click", resetSourceForm);
+      $("test-current-source").addEventListener("click", async () => {
+        const source = sourcePayloadFromForm();
+        const result = await testUrl(source.url, source.type);
+        state.bulkResults = [result, ...state.bulkResults];
+        renderPreview(result);
+        renderBulkResults();
+      });
+      $("force-current-source").addEventListener("click", async () => {
+        if (!state.editingId) {
+          els.sourceStatus.textContent = "Chọn một nguồn đang sửa trước khi force refresh.";
+          return;
+        }
+        await forceRefresh(state.editingId);
+      });
+      $("bulk-test").addEventListener("click", async () => {
+        const urls = $("bulk-urls").value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+        const type = $("bulk-type").value;
+        const started = performance.now();
+        state.bulkResults = [];
+        renderBulkResults();
+        for (const url of urls) {
+          const result = await testUrl(url, type);
+          state.bulkResults.push(result);
+          renderPreview(result);
+          renderBulkResults();
+          const okCount = state.bulkResults.filter((item) => item.status === "OK").length;
+          els.bulkStatus.textContent = `testedCount=${state.bulkResults.length} okCount=${okCount} failedCount=${state.bulkResults.length - okCount}`;
+        }
+        const okCount = state.bulkResults.filter((item) => item.status === "OK").length;
+        els.bulkStatus.textContent = `testedCount=${state.bulkResults.length} okCount=${okCount} failedCount=${state.bulkResults.length - okCount} durationMs=${Math.round(performance.now() - started)}`;
+      });
+      $("add-all-ok").addEventListener("click", async () => {
+        const ok = state.bulkResults.filter((item) => item.status === "OK");
+        for (const result of ok) await saveSourceFromResult(result);
+        els.bulkStatus.textContent = `Đã thêm ${ok.length} nguồn OK vào watch_sources.`;
+      });
+      $("copy-failed").addEventListener("click", async () => {
+        const text = state.bulkResults.filter((item) => item.status !== "OK").map((item) => item.url).join("\n");
+        await navigator.clipboard.writeText(text);
+        els.bulkStatus.textContent = "Đã copy failed URLs.";
+      });
+      els.bulkBody.addEventListener("click", async (event) => {
+        const preview = event.target.closest("[data-preview]");
+        if (preview) renderPreview(state.bulkResults[Number(preview.dataset.preview)]);
+        const add = event.target.closest("[data-add-ok]");
+        if (add) {
+          await saveSourceFromResult(state.bulkResults[Number(add.dataset.addOk)]);
+          els.bulkStatus.textContent = "Đã thêm nguồn OK.";
+        }
+      });
+      els.sourcesBody.addEventListener("click", async (event) => {
+        const edit = event.target.closest("[data-edit]");
+        if (edit) fillSourceForm(state.sources.find((item) => item.id === edit.dataset.edit) || {});
+        const toggle = event.target.closest("[data-toggle]");
+        if (toggle) await db.collection("watch_sources").doc(toggle.dataset.toggle).update({
+          active: toggle.dataset.active === "true",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        const test = event.target.closest("[data-test]");
+        if (test) {
+          const source = state.sources.find((item) => item.id === test.dataset.test);
+          const result = await testUrl(source.url, source.type || "auto");
+          state.bulkResults = [result, ...state.bulkResults];
+          renderPreview(result);
+          renderBulkResults();
+        }
+        const force = event.target.closest("[data-force]");
+        if (force) await forceRefresh(force.dataset.force);
+        const remove = event.target.closest("[data-delete]");
+        if (remove && confirm("Xóa nguồn này khỏi watch_sources?")) await db.collection("watch_sources").doc(remove.dataset.delete).delete();
+      });
+      document.querySelectorAll("[data-op]").forEach((button) => {
+        button.addEventListener("click", () => requestOp(button.dataset.op).catch((error) => {
+          els.opsStatus.textContent = `Không tạo được ops request: ${error.message}`;
+        }));
+      });
+    }
+
+    function start() {
+      if (!ensureFirebaseInitialized()) {
+        els.status.textContent = "Không tải được Firebase SDK.";
+        return;
+      }
+      if (appStarted) return;
+      appStarted = true;
+      db = firebase.firestore();
+      bindEvents();
+      resetSourceForm();
+      db.collection("watch_sources").onSnapshot((snapshot) => {
+        state.sources = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}))
+          .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+        renderSources();
+        els.status.textContent = `Đã tải ${state.sources.length} nguồn.`;
+      }, (error) => {
+        els.status.textContent = `Không tải được watch_sources: ${error.message}`;
+      });
+      db.collection("news").orderBy("publishedAt", "desc").limit(100).onSnapshot((snapshot) => {
+        state.news = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+        renderNewsOps();
+      });
+    }
+
+    function showAdminApp(user) {
+      $("lock").classList.add("hidden");
+      $("app").classList.remove("hidden");
+      els.status.textContent = `Admin: ${user.email}`;
+      start();
+    }
+
+    function showLocked(message) {
+      $("app").classList.add("hidden");
+      $("lock").classList.remove("hidden");
+      $("auth-status").textContent = message || "Chưa đăng nhập.";
+    }
+
+    function initAuth() {
+      if (!ensureFirebaseInitialized(true)) {
+        showLocked("Không tải được Firebase Auth SDK.");
+        return;
+      }
+      $("signin-button").addEventListener("click", async () => {
+        try {
+          await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+        } catch (error) {
+          showLocked(`Không đăng nhập được: ${error.message}`);
+        }
+      });
+      $("signout-button").addEventListener("click", () => firebase.auth().signOut());
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user && ALLOWED_ADMIN_EMAILS.includes(user.email)) {
+          showAdminApp(user);
+        } else if (user) {
+          firebase.auth().signOut();
+          alert("Không có quyền admin");
+          showLocked(`Tài khoản ${user.email} chưa có quyền admin.`);
+        } else {
+          showLocked("Chưa đăng nhập admin.");
+        }
+      });
+    }
+
+    window.addEventListener("load", initAuth);
+  </script>
+</body>
+</html>

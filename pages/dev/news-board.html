@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>News Board 24h</title>
+  <link rel="stylesheet" href="../../css/dev/news-board.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">News Board 24h</p>
+        <h1>News Board 24h</h1>
+        <p class="subtext">Tin trong nước và tin nước ngoài theo dõi nhanh</p>
+      </div>
+      <div class="action-group">
+        <button id="load-news-btn" class="primary">Lấy tin 24h</button>
+        <button id="refresh-news-btn">Làm mới</button>
+        <button id="mock-news-btn">Dùng mock</button>
+      </div>
+    </header>
+
+    <div class="tab-row" id="category-tabs">
+      <button class="tab-button active" data-category="all">All</button>
+      <button class="tab-button" data-category="market">Market</button>
+      <button class="tab-button" data-category="stocks">Stocks</button>
+      <button class="tab-button" data-category="macro">Macro</button>
+      <button class="tab-button" data-category="company">Company</button>
+      <button class="tab-button" data-category="research">Research</button>
+    </div>
+
+    <div class="status-line" id="status-line">Bấm “Lấy tin 24h” để tải dữ liệu.</div>
+
+    <main class="news-columns">
+      <section class="news-column">
+        <div class="column-header">
+          <h2>Tin trong nước</h2>
+          <span class="column-count" id="domestic-count">0 tin</span>
+        </div>
+        <ul class="news-list" id="domestic-news-list"></ul>
+      </section>
+
+      <section class="news-column">
+        <div class="column-header">
+          <h2>Tin nước ngoài</h2>
+          <span class="column-count" id="international-count">0 tin</span>
+        </div>
+        <ul class="news-list" id="international-news-list"></ul>
+      </section>
+    </main>
+  </div>
+
+  <script src="../../js/core/newsSources.js"></script>
+  <script src="../../js/core/mock/mockNewsBoard.js"></script>
+  <script src="../../js/core/services/simpleNewsBoardService.js"></script>
+  <script src="../../js/core/dev/news-board.js"></script>
+</body>
+</html>

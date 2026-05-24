@@ -1,0 +1,22 @@
+{
+  "name": "new-24h",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "watcher": "node scripts/smart-category-watcher.js",
+    "rss": "node scripts/smart-category-watcher.js --once",
+    "analyze": "node scripts/fetch-rss-local.js --analyze-new",
+    "reanalyze": "node scripts/fetch-rss-local.js --reanalyze",
+    "deploy:free": "firebase deploy --only firestore,hosting"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "firebase-admin": "^13.10.0",
+    "rss-parser": "^3.13.0"
+  }
+}
