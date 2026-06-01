@@ -80,6 +80,18 @@
     fetchMode: "rss"
   },
   {
+    sourceId: "vietstock_moi_cap_nhat",
+    sourceName: "Vietstock - Má»›i cáº­p nháº­t",
+    rssUrl: "https://vietstock.vn/chu-de/1-2/moi-cap-nhat.htm",
+    group: "domestic",
+    enabled: true,
+    allowCrawl: true,
+    category: "stocks",
+    sector: "Chá»©ng khoÃ¡n",
+    fetchMode: "html",
+    parserType: "vietstock_moi_cap_nhat"
+  },
+  {
     sourceId: "hose_tin_22",
     sourceName: "HOSE - Tin cÃ´ng bá»‘",
     rssUrl: "https://api.hsx.vn/n/api/v1/News/NewsByCateFeed/22",
@@ -167,6 +179,61 @@
     enabled: false,
     allowCrawl: false,
     category: "market",
+    fetchMode: "rss"
+  },
+  {
+    sourceId: "coindesk_rss",
+    sourceName: "CoinDesk",
+    rssUrl: "https://www.coindesk.com/arc/outboundfeeds/rss/",
+    group: "international",
+    enabled: true,
+    allowCrawl: true,
+    category: "market",
+    sector: "FX/Crypto",
+    fetchMode: "rss"
+  },
+  {
+    sourceId: "cryptoslate_rss",
+    sourceName: "CryptoSlate",
+    rssUrl: "https://cryptoslate.com/feed/",
+    group: "international",
+    enabled: true,
+    allowCrawl: true,
+    category: "market",
+    sector: "FX/Crypto",
+    fetchMode: "rss"
+  },
+  {
+    sourceId: "cointelegraph_rss",
+    sourceName: "Cointelegraph",
+    rssUrl: "https://cointelegraph.com/rss",
+    group: "international",
+    enabled: true,
+    allowCrawl: true,
+    category: "market",
+    sector: "FX/Crypto",
+    fetchMode: "rss"
+  },
+  {
+    sourceId: "bitcoin_news_rss",
+    sourceName: "Bitcoin News",
+    rssUrl: "https://news.bitcoin.com/feed/",
+    group: "international",
+    enabled: true,
+    allowCrawl: true,
+    category: "market",
+    sector: "FX/Crypto",
+    fetchMode: "rss"
+  },
+  {
+    sourceId: "cryptonews_rss",
+    sourceName: "Cryptonews",
+    rssUrl: "https://cryptonews.com/news/feed/",
+    group: "international",
+    enabled: true,
+    allowCrawl: true,
+    category: "market",
+    sector: "FX/Crypto",
     fetchMode: "rss"
   },
   {

@@ -6,8 +6,11 @@
   "scripts": {
     "watcher": "node scripts/smart-category-watcher.js",
     "rss": "node scripts/smart-category-watcher.js --once",
-    "analyze": "node scripts/fetch-rss-local.js --analyze-new",
-    "reanalyze": "node scripts/fetch-rss-local.js --reanalyze",
+    "archive:daily": "node scripts/daily-news-archive.js",
+    "archive:daily:email": "node scripts/daily-news-archive.js --email",
+    "telegram-server": "node telegram-local-server.js",
+    "telegram-auto": "node telegram-local-server.js",
+    "local-auto": "node scripts/local-auto-runner.js",
     "deploy:free": "firebase deploy --only firestore,hosting"
   },
   "keywords": [],
@@ -17,6 +20,7 @@
   "dependencies": {
     "crypto-js": "^4.2.0",
     "firebase-admin": "^13.10.0",
+    "nodemailer": "^8.0.9",
     "rss-parser": "^3.13.0"
   }
 }

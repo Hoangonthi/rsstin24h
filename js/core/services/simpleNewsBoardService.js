@@ -49,10 +49,57 @@ window.simpleNewsBoardService = (function () {
     });
   }
 
+  const WINDOWS_1252_REVERSE = new Map([
+    [0x20AC, 0x80], [0x201A, 0x82], [0x0192, 0x83], [0x201E, 0x84],
+    [0x2026, 0x85], [0x2020, 0x86], [0x2021, 0x87], [0x02C6, 0x88],
+    [0x2030, 0x89], [0x0160, 0x8A], [0x2039, 0x8B], [0x0152, 0x8C],
+    [0x017D, 0x8E], [0x2018, 0x91], [0x2019, 0x92], [0x201C, 0x93],
+    [0x201D, 0x94], [0x2022, 0x95], [0x2013, 0x96], [0x2014, 0x97],
+    [0x02DC, 0x98], [0x2122, 0x99], [0x0161, 0x9A], [0x203A, 0x9B],
+    [0x0153, 0x9C], [0x017E, 0x9E], [0x0178, 0x9F]
+  ]);
+
+  function mojibakeScore(value) {
+    return ((String(value || '').match(/[ÃÂÄÆáºá»]/g) || []).length * 2)
+      + ((String(value || '').match(/�/g) || []).length * 5);
+  }
+
+  function decodeWindows1252AsUtf8(value) {
+    const text = String(value || '');
+    if (!/[ÃÂÄÆáºá»]/.test(text)) return text;
+    const bytes = [];
+    for (const char of text) {
+      const code = char.codePointAt(0);
+      if (WINDOWS_1252_REVERSE.has(code)) {
+        bytes.push(WINDOWS_1252_REVERSE.get(code));
+      } else if (code <= 255) {
+        bytes.push(code);
+      } else {
+        return text;
+      }
+    }
+    try {
+      const decoded = new TextDecoder('utf-8', {fatal: false}).decode(new Uint8Array(bytes));
+      return mojibakeScore(decoded) < mojibakeScore(text) && !decoded.includes('�') ? decoded : text;
+    } catch (error) {
+      return text;
+    }
+  }
+
+  function fixMojibake(value) {
+    let text = decodeWindows1252AsUtf8(value);
+    for (let index = 0; index < 2 && mojibakeScore(text) > 0; index += 1) {
+      const decoded = decodeWindows1252AsUtf8(text);
+      if (decoded === text) break;
+      text = decoded;
+    }
+    return text;
+  }
+
   function stripHtml(value) {
     const temp = document.createElement('div');
     temp.innerHTML = decodeBrokenNumericEntities(value || '');
-    return (temp.textContent || temp.innerText || '')
+    return fixMojibake((temp.textContent || temp.innerText || '')
       .replace(/#(\d{2,7});?/g, (match, code) => {
         const codePoint = Number(code);
         if (!Number.isFinite(codePoint) || codePoint < 32 || codePoint > 1114111) {
@@ -65,7 +112,7 @@ window.simpleNewsBoardService = (function () {
         }
       })
       .replace(/\s+/g, ' ')
-      .trim();
+      .trim());
   }
 
   function normalizeText(value) {
@@ -209,6 +256,152 @@ window.simpleNewsBoardService = (function () {
     return Array.from(new Set(matches.filter((symbol) => SYMBOL_ALLOWLIST.has(symbol))));
   }
 
+  function unique(values) {
+    return Array.from(new Set((values || []).filter(Boolean)));
+  }
+
+  function compactTicker(value) {
+    return String(value || '').trim().toUpperCase();
+  }
+
+  function normalizeTickerList(values, limit) {
+    return unique((values || [])
+      .map(compactTicker)
+      .filter((ticker) => /^[A-Z0-9]{2,10}$/.test(ticker)))
+      .slice(0, limit);
+  }
+
+  function confidenceFromGraph(value) {
+    const number = Number(value || 0);
+    if (!Number.isFinite(number)) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, number <= 1 ? Math.round(number * 100) : Math.round(number)));
+  }
+
+  function traceTargetTitle(title = '') {
+    const normalized = normalizeText(title);
+    return normalized.includes('pet fair') || normalized.includes('gia usd hom nay 26.5.2026');
+  }
+
+  function compactTraceGraph(graph) {
+    if (!graph) return null;
+    return {
+      finalSector: graph.finalSector || graph.sector || '',
+      finalTickers: normalizeTickerList([
+        ...(Array.isArray(graph.finalTickers) ? graph.finalTickers : []),
+        ...(Array.isArray(graph.primaryTickers) ? graph.primaryTickers : []),
+        graph.primaryTicker,
+        ...(Array.isArray(graph.relatedStocks) ? graph.relatedStocks : []),
+        ...(Array.isArray(graph.watchlistStocks) ? graph.watchlistStocks : [])
+      ], 20),
+      sector: graph.sector || '',
+      finalDecidedBy: graph.finalDecidedBy || '',
+      sectorEvidenceCount: graph.sectorEvidenceCount || 0,
+      sectorRejectedReason: graph.sectorRejectedReason || ''
+    };
+  }
+
+  function topLevelMarketGraph(item = {}) {
+    if (!item || !(item.finalDecidedBy || item.analyzedWithRulesVersion || item.sectorEvidenceCount !== undefined || item.finalSector || item.sector)) {
+      return null;
+    }
+    return {
+      finalSector: item.finalSector || item.sector || '',
+      finalTickers: normalizeTickerList([
+        ...(Array.isArray(item.finalTickers) ? item.finalTickers : []),
+        ...(Array.isArray(item.primaryTickers) ? item.primaryTickers : []),
+        item.primaryTicker,
+        ...(Array.isArray(item.relatedStocks) ? item.relatedStocks : []),
+        ...(Array.isArray(item.watchlistStocks) ? item.watchlistStocks : [])
+      ], 20),
+      sector: item.finalSector || item.sector || '',
+      eventType: item.eventType || '',
+      primaryTicker: item.primaryTicker || null,
+      primaryTickers: Array.isArray(item.primaryTickers) ? item.primaryTickers : [],
+      relatedStocks: Array.isArray(item.relatedStocks) ? item.relatedStocks : [],
+      watchlistStocks: Array.isArray(item.watchlistStocks) ? item.watchlistStocks : [],
+      tickerDetails: Array.isArray(item.tickerDetails) ? item.tickerDetails : [],
+      sentiment: item.sentiment || item.marketSentiment || '',
+      impactLevel: item.impactLevel || '',
+      confidence: item.confidence ?? item.confidenceScore ?? 0,
+      matchedBy: Array.isArray(item.matchedBy) ? item.matchedBy : [],
+      reason: item.reason || item.reasonShort || '',
+      horizon: item.horizon || item.impactHorizon || '',
+      finalDecidedBy: item.finalDecidedBy || 'top_level_market_graph',
+      sectorEvidenceCount: item.sectorEvidenceCount || 0,
+      sectorRejectedReason: item.sectorRejectedReason || ''
+    };
+  }
+
+  function traceService(item, stage, payload) {
+    if (!traceTargetTitle(item?.title || '')) return;
+    // eslint-disable-next-line no-console
+    console.debug(`[MI_TRACE:${stage}]`, { title: item.title || '', ...payload });
+  }
+
+  function deriveMarketIntelligence(item) {
+    const savedGraph = item.marketGraph || item.marketIntelligence || topLevelMarketGraph(item);
+    if (savedGraph) {
+      const primaryTickers = normalizeTickerList([
+        ...(Array.isArray(savedGraph.primaryTickers) ? savedGraph.primaryTickers : []),
+        savedGraph.primaryTicker
+      ], 2);
+      const relatedStocks = normalizeTickerList(savedGraph.relatedStocks || [], 5)
+        .filter((ticker) => !primaryTickers.includes(ticker));
+      const watchlistStocks = normalizeTickerList(savedGraph.watchlistStocks || [], 10)
+        .filter((ticker) => !primaryTickers.includes(ticker) && !relatedStocks.includes(ticker));
+      const output = {
+        primaryTickers,
+        primaryTicker: primaryTickers[0] || null,
+        relatedStocks,
+        watchlistStocks,
+        tickerDetails: Array.isArray(savedGraph.tickerDetails) ? savedGraph.tickerDetails : [],
+        finalSector: savedGraph.finalSector || savedGraph.sector || '',
+        finalTickers: normalizeTickerList([
+          ...(Array.isArray(savedGraph.finalTickers) ? savedGraph.finalTickers : []),
+          ...primaryTickers,
+          ...relatedStocks,
+          ...watchlistStocks
+        ], 20),
+        eventType: savedGraph.eventType || item.eventType || '',
+        impactLevel: savedGraph.impactLevel || item.impactLevel || '',
+        sentiment: savedGraph.sentiment || item.sentiment || item.marketSentiment || '',
+        horizon: savedGraph.horizon || item.horizon || item.impactHorizon || '',
+        confidence: confidenceFromGraph(savedGraph.confidence ?? item.confidence ?? item.confidenceScore),
+        matchedBy: Array.isArray(savedGraph.matchedBy) ? savedGraph.matchedBy : [],
+        reason: savedGraph.reason || item.reason || item.reasonShort || '',
+        tickerCoverageLevel: savedGraph.tickerCoverageLevel || (primaryTickers.length ? 'direct' : relatedStocks.length ? 'inferred' : watchlistStocks.length ? 'watchlist_only' : 'none'),
+        tickerCoverageReason: savedGraph.tickerCoverageReason || item.tickerCoverageReason || ''
+      };
+      traceService(item, 'after_simpleNewsBoardService', {
+        displaySector: output.finalSector,
+        displayTickers: output.finalTickers,
+        sector: output.finalSector,
+        tickers: output.finalTickers,
+        marketGraph: compactTraceGraph(savedGraph)
+      });
+      return output;
+    }
+
+    return {
+      primaryTickers: [],
+      primaryTicker: null,
+      relatedStocks: [],
+      watchlistStocks: [],
+      tickerDetails: [],
+      eventType: '',
+      impactLevel: '',
+      sentiment: '',
+      horizon: '',
+      confidence: 0,
+      matchedBy: [],
+      reason: '',
+      tickerCoverageLevel: 'none',
+      tickerCoverageReason: ''
+    };
+  }
+
   function formatDisplayTime(date) {
     const now = new Date();
     const diffMs = now - date;
@@ -318,12 +511,16 @@ window.simpleNewsBoardService = (function () {
     });
   }
 
-  function filterLast24h(items) {
-    const threshold = Date.now() - 24 * 60 * 60 * 1000;
+  function filterLast48h(items) {
+    const threshold = Date.now() - 48 * 60 * 60 * 1000;
     return items.filter((item) => {
       const publishedAt = item.publishedAt || item.pubDate;
       return publishedAt instanceof Date && publishedAt.getTime() >= threshold;
     });
+  }
+
+  function filterLast24h(items) {
+    return filterLast48h(items);
   }
 
   function normalizeNewsItem(item, source) {
@@ -331,18 +528,18 @@ window.simpleNewsBoardService = (function () {
     const summary = item.description || stripHtml(item.rawDescription);
     const contentText = item.contentText || summary;
     const symbolText = `${item.title || ''} ${summary || ''}`;
-    return {
+    const baseItem = {
       newsId: createStableNewsId(source, item),
       title: item.title,
-      sourceName: source.sourceName,
+      sourceName: fixMojibake(source.sourceName),
       sourceUrl: item.link || '#',
       hasDetailLink: Boolean(item.link),
       hasExplicitDate: item.hasExplicitDate !== false,
       publishedAt,
       publishedAtText: formatExactTime(publishedAt),
       displayTime: formatDisplayTime(publishedAt),
-      summary,
-      contentText,
+      summary: fixMojibake(summary),
+      contentText: fixMojibake(contentText),
       rawDescription: item.rawDescription || '',
       rawContent: item.rawContent || item.rawDescription || '',
       symbols: detectSymbols(symbolText),
@@ -351,6 +548,12 @@ window.simpleNewsBoardService = (function () {
       category: source.category || 'market',
       status: 'published',
       group: source.group || 'international'
+    };
+    const intelligence = deriveMarketIntelligence(baseItem);
+    return {
+      ...baseItem,
+      ...intelligence,
+      symbols: unique([...(baseItem.symbols || []), ...(intelligence.primaryTickers || []), ...(intelligence.relatedStocks || [])]).slice(0, 6)
     };
   }
 
@@ -378,10 +581,13 @@ window.simpleNewsBoardService = (function () {
     detectSymbols,
     fetchRss,
     filterLast24h,
+    filterLast48h,
+    deriveMarketIntelligence,
     normalizeNewsItem,
     parseRssXml,
     removeDuplicateNews,
     sortByPublishedAtDesc,
-    stripHtml
+    stripHtml,
+    fixMojibake
   };
 })();

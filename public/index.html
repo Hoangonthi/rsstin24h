@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Broker News Dashboard</title>
+  <title>Radar thị trường</title>
+  <link rel="icon" href="data:,">
   <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
   <script>
     window.NEW24H_FIREBASE_CONFIG = {
@@ -20,860 +22,419 @@
       color-scheme: dark;
       --bg: #0b1020;
       --panel: #111827;
+      --panel-soft: rgba(17, 24, 39, 0.72);
       --border: rgba(148, 163, 184, 0.22);
       --text: #e5e7eb;
       --muted: #94a3b8;
       --accent: #38bdf8;
-      --hot: #fb7185;
-      --important: #f59e0b;
-      --watch: #a78bfa;
-      --risk: #f97316;
-      --ok: #22c55e;
+      --good: #86efac;
+      --warn: #facc15;
+      --bad: #fb7185;
     }
 
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       min-height: 100vh;
       background: var(--bg);
       color: var(--text);
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding: 18px;
+      font-size: 15px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
       overflow-x: hidden;
     }
-
-    .shell { max-width: 1440px; min-width: 0; margin: 0 auto; }
-
-    header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-      margin-bottom: 14px;
-    }
-
-    h1 { margin: 0; font-size: 1.7rem; line-height: 1.15; letter-spacing: 0; }
-    h2 { margin: 0 0 10px; font-size: 1.05rem; letter-spacing: 0; }
-
-    .subtext,
-    .status,
-    .meta,
-    .summary,
-    .score-row,
-    .advisory-note,
-    .empty {
-      color: var(--muted);
-      font-size: 0.8rem;
-      line-height: 1.45;
-    }
-
-    .subtext { margin: 5px 0 0; font-size: 0.9rem; }
-    .status { text-align: right; font-size: 0.9rem; }
-
-    .summary-grid {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 10px;
-      min-width: 0;
-    }
-
-    .news-item,
-    .bulletin-panel {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: rgba(17, 24, 39, 0.92);
-    }
-
-    .summary-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      min-height: 28px;
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      border-radius: 999px;
-      background: rgba(15, 23, 42, 0.76);
-      color: #cbd5e1;
-      padding: 4px 9px;
-      font-size: 0.78rem;
-      line-height: 1.2;
-      white-space: nowrap;
-    }
-
-    button.summary-pill {
-      cursor: pointer;
-    }
-
-    .summary-pill strong {
-      color: #f8fafc;
-      font-weight: 850;
-    }
-
-    .summary-pill.info { border-color: rgba(56, 189, 248, 0.24); background: rgba(14, 116, 144, 0.12); }
-    .summary-pill.hot { border-color: rgba(245, 158, 11, 0.38); background: rgba(245, 158, 11, 0.13); color: #fde68a; }
-    .summary-pill.risk { border-color: rgba(248, 113, 113, 0.42); background: rgba(239, 68, 68, 0.14); color: #fecaca; }
-    .summary-pill.good { border-color: rgba(34, 197, 94, 0.32); background: rgba(34, 197, 94, 0.11); color: #bbf7d0; }
-    .summary-pill.active {
-      border-color: rgba(56, 189, 248, 0.88);
-      background: rgba(56, 189, 248, 0.22);
-      color: #f0f9ff;
-      box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.18);
-    }
-
-    .controls,
-    .filters,
-    .action-row,
-    .bulletin-actions,
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      max-width: 100%;
-      overflow: hidden;
-    }
-
-    .toolbar {
-      align-items: center;
-      margin-bottom: 10px;
-    }
-
-    .toolbar.filters {
-      display: grid;
-      grid-template-columns: minmax(220px, 1fr) max-content max-content;
-      align-items: center;
-      overflow: visible;
-    }
-
-    .toolbar.filters .advanced-filter {
-      display: none;
-    }
-
-    .search-wrap {
-      position: relative;
-      min-width: 0;
-    }
-
-    .search-wrap input {
-      padding-right: 34px;
-    }
-
-    .clear-search {
-      position: absolute;
-      top: 50%;
-      right: 6px;
-      width: 24px;
-      min-width: 24px;
-      min-height: 24px;
-      height: 24px;
-      transform: translateY(-50%);
-      border-radius: 999px;
-      padding: 0;
-      color: #cbd5e1;
-      background: rgba(15, 23, 42, 0.9);
-    }
-
-    .clear-search[hidden] {
-      display: none;
-    }
-
-    .reset-filters {
-      min-height: 34px;
-      border-color: rgba(248, 113, 113, 0.38);
-      background: rgba(127, 29, 29, 0.18);
-      color: #fecaca;
-      white-space: nowrap;
-    }
-
-    .bulletin-actions {
-      justify-content: flex-end;
-      margin-bottom: 12px;
-    }
-
-    .controls > *,
-    .filters > *,
-    .action-row > *,
-    .bulletin-actions > *,
-    .toolbar > * {
-      min-width: 0;
-    }
-
-    button,
-    input,
-    select {
-      max-width: 100%;
-      min-height: 34px;
-      border: 1px solid var(--border);
-      border-radius: 7px;
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text);
-      padding: 0 10px;
+    a { color: inherit; text-decoration: none; }
+    button, input, select {
       font: inherit;
-      font-size: 0.88rem;
-    }
-
-    button { cursor: pointer; }
-    button.active { border-color: rgba(56, 189, 248, 0.72); background: rgba(56, 189, 248, 0.16); color: #e0f2fe; }
-    button:disabled { cursor: not-allowed; opacity: 0.55; }
-    .primary-action { border-color: rgba(56, 189, 248, 0.55); background: rgba(56, 189, 248, 0.12); }
-    input, select { width: 100%; }
-    .toolbar button { flex: 0 1 auto; }
-    .toolbar input,
-    .toolbar select { flex: 1 1 150px; width: auto; }
-    .toolbar.filters input,
-    .toolbar.filters select,
-    .toolbar.filters .toggle {
-      width: 100%;
-      min-width: 0;
-    }
-    option { background: #111827; color: var(--text); }
-
-    .toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      min-height: 34px;
+      color: inherit;
       border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.92);
       border-radius: 7px;
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text);
-      padding: 0 10px;
-      font-size: 0.86rem;
-      white-space: nowrap;
     }
-
-    .toggle input { width: auto; min-height: auto; margin: 0; }
-
-    .intel-tabs {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px 12px;
-      align-items: flex-start;
-      overflow: hidden;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
-      max-width: 100%;
-      min-width: 0;
-      white-space: normal;
-    }
-
-    .intel-tabs.is-collapsed {
-      max-height: 118px;
-    }
-
-    .intel-tab-group {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px;
-      min-width: 0;
-      width: 100%;
-    }
-
-    .intel-tab-group.is-secondary {
-      padding-top: 2px;
-      border-top: 1px solid rgba(148, 163, 184, 0.1);
-    }
-
-    .intel-tab-heading {
-      flex: 0 0 100%;
-      color: var(--muted);
-      font-size: 0.68rem;
-      font-weight: 850;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-top: 1px;
-    }
-
-    .intel-tab {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex: 0 1 auto;
-      max-width: 184px;
-      min-width: 0;
-      min-height: 27px;
-      border-radius: 999px;
-      padding: 0 7px 0 9px;
-      font-size: 0.78rem;
+    button {
+      min-height: 36px;
+      padding: 0 12px;
+      cursor: pointer;
+      font-weight: 650;
       line-height: 1;
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
-
-    .intel-tab > span:first-child {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    button:hover { border-color: rgba(56, 189, 248, 0.5); }
+    button.active { border-color: rgba(56, 189, 248, 0.78); background: rgba(14, 116, 144, 0.28); color: #e0f2fe; }
+    input, select { min-height: 38px; padding: 0 11px; width: 100%; }
+    .shell { width: min(1180px, calc(100% - 28px)); margin: 0 auto; padding: 20px 0 28px; }
+    header { display: grid; place-items: center; text-align: center; gap: 12px; margin-bottom: 14px; }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.45rem, 2.4vw, 2rem);
+      line-height: 1.15;
+      letter-spacing: 0;
+      font-weight: 760;
     }
-
-    .intel-tab.active {
-      border-color: rgba(56, 189, 248, 0.95);
-      background: rgba(56, 189, 248, 0.24);
-      color: #f0f9ff;
-      box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.2);
-    }
-
-    .chip-count {
-      display: inline-flex;
+    .subtext { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    .search-row { width: min(680px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    .tabs, .view-switch, .filters {
+      display: flex;
+      flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      min-width: 18px;
-      height: 17px;
-      margin-left: 5px;
-      border-radius: 999px;
-      padding: 0 5px;
-      color: #dbeafe;
-      background: rgba(59, 130, 246, 0.24);
-      font-size: 0.68rem;
-      font-weight: 850;
-    }
-    .chip-count.low { color: #bbf7d0; background: rgba(34, 197, 94, 0.18); }
-    .chip-count.medium { color: #fde68a; background: rgba(245, 158, 11, 0.2); }
-    .chip-count.high { color: #fecaca; background: rgba(239, 68, 68, 0.24); }
-
-    .tabs-actions {
-      display: flex;
-      justify-content: flex-start;
-      margin: -2px 0 10px;
-    }
-
-    .tabs-toggle {
-      min-height: 26px;
-      border-radius: 999px;
-      padding: 0 10px;
-      color: #bae6fd;
-      border-color: rgba(56, 189, 248, 0.35);
-      background: rgba(8, 47, 73, 0.28);
-      font-size: 0.78rem;
-    }
-
-    .intel-dashboard {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin-bottom: 10px;
-      min-width: 0;
-    }
-
-    .intel-panel {
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: rgba(17, 24, 39, 0.92);
-      padding: 10px;
-      min-width: 0;
-    }
-
-    .intel-panel h2 {
-      margin: 0 0 8px;
-      color: #cbd5e1;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .heatmap-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 6px;
-    }
-
-    .heat-cell,
-    .ticker-cell,
-    .live-row {
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.035);
-      padding: 7px 8px;
-      min-width: 0;
-    }
-
-    .heat-cell.hot { border-color: rgba(248, 113, 113, 0.5); background: rgba(239, 68, 68, 0.12); }
-    .heat-cell.watch { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.1); }
-    .heat-cell.good { border-color: rgba(34, 197, 94, 0.42); background: rgba(34, 197, 94, 0.09); }
-    .heat-label { color: #e5e7eb; font-size: 0.78rem; font-weight: 800; }
-    .heat-meta { margin-top: 2px; color: var(--muted); font-size: 0.72rem; }
-
-    .ticker-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 6px;
-    }
-
-    .ticker-cell strong { color: #86efac; font-size: 0.84rem; }
-    .ticker-cell span { float: right; color: #e5e7eb; font-size: 0.76rem; font-weight: 800; }
-    .ticker-cell div { margin-top: 3px; color: var(--muted); font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .live-ticker {
-      display: grid;
-      gap: 5px;
-      max-height: 224px;
-      overflow: auto;
-    }
-
-    .live-row {
-      display: grid;
-      grid-template-columns: max-content 1fr max-content;
-      gap: 7px;
-      align-items: center;
-      font-size: 0.76rem;
-    }
-
-    .live-row strong { color: #93c5fd; }
-    .live-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .live-row em { color: var(--muted); font-style: normal; }
-
-    .timeline-row {
-      display: grid;
-      grid-template-columns: 52px minmax(0, 1fr) max-content;
       gap: 8px;
-      align-items: baseline;
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 6px;
-      background: rgba(15, 23, 42, 0.58);
-      padding: 7px 9px;
-      font-size: 0.82rem;
+      margin: 12px 0;
     }
-    .timeline-row time { color: #7dd3fc; font-weight: 850; }
-    .timeline-row a { color: #e5e7eb; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .timeline-row a:hover { text-decoration: underline; }
-    .timeline-row span { color: var(--muted); font-size: 0.74rem; white-space: nowrap; }
-
-    .news-list { display: grid; gap: 6px; }
-    .news-item { padding: 7px 10px; }
-    .news-item:hover { border-color: rgba(56, 189, 248, 0.38); background: rgba(17, 24, 39, 0.98); }
-
-    .load-more-row {
-      display: flex;
-      align-items: center;
+    .tabs button {
+      min-width: 128px;
       justify-content: center;
-      gap: 10px;
-      min-height: 46px;
-      margin: 10px 0 4px;
-      color: var(--muted);
-      font-size: 0.82rem;
+      font-size: 0.94rem;
+      border-color: rgba(148, 163, 184, 0.28);
     }
-
-    .load-more-row[hidden] {
-      display: none;
+    .filters { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 8px; }
+    .status { margin: 9px 0; color: var(--muted); font-size: 0.82rem; text-align: center; }
+    .summary { display: none !important; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 12px 0; }
+    .summary-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 9px 10px;
     }
-
-    .load-more-button {
-      min-height: 32px;
-      border-color: rgba(56, 189, 248, 0.34);
-      background: rgba(14, 116, 144, 0.14);
-      color: #bae6fd;
-      font-size: 0.82rem;
-    }
-
-    .load-more-status {
-      min-width: 72px;
-      text-align: left;
-    }
-
-    .new-news-notice {
-      position: sticky;
-      top: 8px;
-      z-index: 20;
-      display: flex;
-      justify-content: center;
-      margin: 0 0 8px;
-      pointer-events: none;
-    }
-
-    .new-news-notice[hidden] {
-      display: none;
-    }
-
-    .new-news-notice button {
-      pointer-events: auto;
-      min-height: 30px;
-      border-color: rgba(34, 197, 94, 0.42);
-      background: rgba(20, 83, 45, 0.88);
-      color: #dcfce7;
-      font-size: 0.82rem;
-      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.28);
-    }
-    .news-main { position: relative; padding-right: 62px; }
-    .title-row {
-      display: flex;
-      align-items: baseline;
-      gap: 7px;
-      min-width: 0;
-    }
-    .ticker-badge {
-      flex: 0 0 auto;
-      border: 1px solid rgba(34, 197, 94, 0.48);
-      border-radius: 5px;
-      background: rgba(34, 197, 94, 0.11);
-      color: #86efac;
-      padding: 1px 5px;
-      font-size: 0.73rem;
-      line-height: 1.35;
-      font-weight: 850;
-    }
-    .title {
-      min-width: 0;
-      color: #e5e7eb;
-      font-weight: 680;
-      font-size: 0.95rem;
-      line-height: 1.35;
-      text-decoration: none;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
+    .summary-card strong { display: block; font-size: 1.1rem; }
+    .summary-card span { color: var(--muted); font-size: 0.76rem; }
+    .news-list {
+      display: grid;
+      gap: 0;
+      width: 100%;
+      max-width: 100%;
       overflow: hidden;
     }
-    .title-source-time {
-      color: var(--muted);
-      font-weight: 500;
-      white-space: nowrap;
-    }
-    .title-main { color: #f8fafc; }
-    .title:hover { text-decoration: underline; }
-    .meta { margin-top: 3px; }
-    .summary { margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .tag-row, .score-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
-
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: rgba(255, 255, 255, 0.04);
-      color: #cbd5e1;
-      padding: 2px 6px;
-      font-size: 0.72rem;
-      line-height: 1.25;
-    }
-
-    .badge.hot { color: var(--hot); border-color: rgba(251, 113, 133, 0.58); }
-    .badge.important { color: var(--important); border-color: rgba(245, 158, 11, 0.58); }
-    .badge.watch { color: var(--watch); border-color: rgba(167, 139, 250, 0.58); }
-    .badge.risk, .badge.panic, .badge.risk_off { color: var(--risk); border-color: rgba(249, 115, 22, 0.58); }
-    .badge.good, .badge.strong, .badge.bullish, .badge.risk_on { color: var(--ok); border-color: rgba(34, 197, 94, 0.5); }
-
-    .score-stack {
-      position: absolute;
-      top: 0;
-      right: 0;
+    .news-row {
       display: grid;
-      justify-items: stretch;
-      gap: 2px;
-      width: 54px;
-    }
-    .report-badge {
-      flex: 0 0 auto;
-      border: 1px solid rgba(125, 211, 252, 0.34);
-      border-radius: 5px;
-      background: rgba(14, 116, 144, 0.12);
-      color: #bae6fd;
-      padding: 1px 5px;
-      font-size: 0.72rem;
-      line-height: 1.35;
-      font-weight: 850;
-    }
-
-    .score-badge {
-      min-width: 0;
-      border: 1px solid rgba(148, 163, 184, 0.26);
-      border-radius: 6px;
-      padding: 2px 4px;
-      text-align: center;
-      font-size: 0.68rem;
-      line-height: 1.1;
-      font-weight: 850;
-      color: #bbf7d0;
-      background: rgba(34, 197, 94, 0.12);
-    }
-    .score-badge.hot {
-      color: #fecaca;
-      border-color: rgba(248, 113, 113, 0.56);
-      background: rgba(239, 68, 68, 0.16);
-    }
-    .score-badge.watch {
-      color: #fde68a;
-      border-color: rgba(245, 158, 11, 0.52);
-      background: rgba(245, 158, 11, 0.14);
-    }
-    .dup-badge {
-      display: inline-flex;
-      align-items: center;
-      margin-left: 5px;
-      border: 1px solid rgba(56, 189, 248, 0.32);
-      border-radius: 5px;
-      color: #7dd3fc;
-      background: rgba(56, 189, 248, 0.08);
-      padding: 1px 5px;
-      font-size: 0.7rem;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-    .source-action {
-      color: #7dd3fc;
-      font-size: 0.78rem;
-      font-weight: 750;
-      text-decoration: none;
-    }
-    .source-action:hover { text-decoration: underline; }
-
-    .detail-action {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 20px;
-      border-radius: 5px;
-      padding: 0 4px;
-      color: #94a3b8;
-      border-color: rgba(148, 163, 184, 0.16);
-      background: rgba(15, 23, 42, 0.48);
-      font-size: 0.64rem;
-      font-weight: 750;
-      line-height: 1.05;
-      white-space: nowrap;
-      text-align: center;
-    }
-
-    .detail-action:hover {
-      border-color: rgba(56, 189, 248, 0.38);
-      color: #bae6fd;
-      background: rgba(8, 47, 73, 0.32);
-    }
-
-    .stream-filters {
-      display: grid;
-      grid-template-columns: minmax(0, 1.6fr) minmax(140px, 0.7fr) minmax(140px, 0.7fr) minmax(170px, 0.8fr);
-      gap: 10px;
+      grid-template-columns: 32px minmax(0, 1fr) 22px auto;
       align-items: start;
-      margin: 10px 0 8px;
+      column-gap: 2px;
+      row-gap: 0;
+      min-height: 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      padding: 4px 6px;
+    }
+    .news-side {
+      display: grid;
+      gap: 2px;
       min-width: 0;
     }
-
-    .stream-filter-group {
+    .news-code-cell {
       min-width: 0;
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 8px;
-      background: rgba(15, 23, 42, 0.5);
-      padding: 7px;
-    }
-
-    .stream-filter-label {
-      margin-bottom: 5px;
-      color: var(--muted);
-      font-size: 0.7rem;
-      font-weight: 800;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .letter-filter {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-      min-width: 0;
-    }
-
-    .letter-filter button {
-      min-height: 24px;
-      min-width: 24px;
-      border-radius: 5px;
-      padding: 0 6px;
-      font-size: 0.72rem;
-      line-height: 1;
-    }
-
-    .letter-filter button[data-letter="all"] {
-      min-width: 48px;
-    }
-
-    .stream-filter-group select {
-      min-height: 30px;
-      font-size: 0.8rem;
-      background: rgba(255, 255, 255, 0.045);
-    }
-
-    .active-filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 6px;
-      min-height: 30px;
-      margin: 0 0 9px;
-      color: var(--muted);
-      font-size: 0.78rem;
-    }
-
-    .active-filter-bar[hidden] {
-      display: none;
-    }
-
-    .active-filter-label {
-      font-weight: 750;
-      color: #cbd5e1;
-    }
-
-    .active-filter-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      min-height: 25px;
-      border: 1px solid rgba(56, 189, 248, 0.26);
-      border-radius: 999px;
-      background: rgba(8, 47, 73, 0.3);
-      color: #dbeafe;
-      padding: 0 7px 0 9px;
-      font-size: 0.75rem;
+      max-width: 100%;
+      overflow: hidden;
+      color: #bbf7d0;
       white-space: nowrap;
+      font-size: 0.68rem;
+      line-height: 1.25;
+      font-weight: 650;
+      text-align: right;
+      justify-self: start;
     }
-
-    .active-filter-chip button {
-      width: 18px;
-      min-width: 18px;
-      height: 18px;
-      min-height: 18px;
-      border-radius: 999px;
-      padding: 0;
-      color: #bae6fd;
-      background: rgba(15, 23, 42, 0.8);
-      line-height: 1;
-    }
-
-    .active-filter-reset {
-      min-height: 25px;
-      border-radius: 999px;
-      padding: 0 9px;
-      color: #fecaca;
-      border-color: rgba(248, 113, 113, 0.34);
-      background: rgba(127, 29, 29, 0.16);
-      font-size: 0.75rem;
-    }
-    .advisory-note { margin-top: 7px; color: #cbd5e1; }
-
-    .legal-disclaimer {
-      margin: 14px 0 4px;
+    .news-time {
       color: var(--muted);
       font-size: 0.74rem;
-      line-height: 1.45;
-      text-align: center;
+      line-height: 1.35;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
     }
-
-    .detail-backdrop {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      background: rgba(2, 6, 23, 0.72);
-    }
-
-    .detail-backdrop.visible { display: flex; }
-
-    .detail-modal {
-      width: min(860px, 100%);
-      max-height: min(760px, 92vh);
-      overflow: auto;
-      border: 1px solid rgba(148, 163, 184, 0.32);
-      border-radius: 8px;
-      background: #0b1020;
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
-    }
-
-    .detail-head {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(11, 16, 32, 0.96);
-      padding: 12px;
-    }
-
-    .detail-head h2 { margin: 0; font-size: 1rem; line-height: 1.35; }
-    .detail-body { display: grid; gap: 10px; padding: 12px; }
-    .detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-    .metric {
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8px;
-      background: rgba(255, 255, 255, 0.035);
-    }
-    .metric-label { color: var(--muted); font-size: 0.72rem; }
-    .metric-value { margin-top: 3px; font-weight: 850; }
-    .source-list { display: grid; gap: 6px; }
-    .source-list a { color: #7dd3fc; text-decoration: none; }
-    .source-list a:hover { text-decoration: underline; }
-
-    .bulletin-panel,
-    .bulletin-content,
-    .news-card,
-    .news-item {
+    .news-codes {
+      min-width: 0;
       max-width: 100%;
+      overflow: hidden;
+      color: #bbf7d0;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.68rem;
+      line-height: 1.25;
+      font-weight: 650;
+    }
+    .news-main {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    .news-title {
+      display: block;
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      overflow: hidden;
+      color: #7dd3fc;
+      text-decoration: none;
+      font-size: 0.82rem;
+      line-height: 1.18;
+      font-weight: 400;
+      white-space: normal;
       overflow-wrap: anywhere;
       word-break: break-word;
     }
-
-    .bulletin-panel { display: none; margin-bottom: 12px; padding: 12px; }
-    .bulletin-panel.visible { display: block; }
-    .bulletin-content {
-      margin: 0;
-      color: #dbeafe;
-      font-size: 0.9rem;
-      line-height: 1.55;
+    .news-title:hover { color: #bae6fd; text-decoration: underline; }
+    .news-title.read { color: #a78bfa; opacity: 0.82; }
+    .news-title-text {
+      display: inline;
     }
-    .bulletin-content h3 { margin: 0 0 10px; font-size: 1rem; letter-spacing: 0; }
-    .bulletin-content h4 { margin: 14px 0 6px; font-size: 0.92rem; letter-spacing: 0; }
-    .bulletin-content p { margin: 0 0 8px; }
-    .bulletin-content ul { margin: 0 0 8px; padding-left: 20px; }
-    .bulletin-content li { margin-bottom: 8px; }
-    .bulletin-content a { color: #38bdf8; text-decoration: underline; }
-
-    @media (max-width: 1280px) {
-      .intel-dashboard { grid-template-columns: 1fr; }
+    .news-title .news-source-inline {
+      color: #94a3b8;
+      float: right;
+      font-weight: 400;
+      margin-left: 8px;
+      white-space: nowrap;
     }
-
-    @media (max-width: 960px) {
-      .toolbar.filters { grid-template-columns: 1fr; }
-      .toolbar.filters .reset-filters { width: 100%; }
+    .news-source {
+      display: inline;
+      min-width: 0;
+      overflow: hidden;
+      color: var(--muted);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.7rem;
+      line-height: 1.25;
     }
-
-    @media (max-width: 768px) {
-      body { padding: 12px; }
-      .intel-dashboard, .detail-grid { grid-template-columns: 1fr; }
-      .controls,
-      .bulletin-actions,
-      .toolbar:not(.filters) {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
+    .news-meta { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      max-width: 160px;
+      min-height: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 999px;
+      color: #cbd5e1;
+      padding: 0 7px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.68rem;
+      font-weight: 650;
+    }
+    .pill.fx { border-color: rgba(96, 165, 250, 0.42); color: #dbeafe; }
+    .pill.hot { border-color: rgba(251, 113, 133, 0.44); color: #fecdd3; }
+    .pill.good { border-color: rgba(34, 197, 94, 0.34); color: #bbf7d0; }
+    .source-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px 24px; }
+    .source-column { min-width: 0; }
+    .source-column h2 { margin: 0; color: #cbd5e1; font-size: 0.98rem; }
+    .source-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .source-count { color: var(--muted); font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+    .source-list { display: grid; gap: 4px; }
+    .source-more {
+      width: 100%;
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(56, 189, 248, 0.32);
+      background: rgba(14, 165, 233, 0.08);
+      color: #7dd3fc;
+      font-size: 0.72rem;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .source-more:hover { border-color: rgba(56, 189, 248, 0.72); background: rgba(14, 165, 233, 0.16); }
+    .telegram-action {
+      min-height: 26px;
+      padding: 0 8px;
+      border-color: rgba(34, 197, 94, 0.38);
+      background: rgba(22, 101, 52, 0.22);
+      color: #bbf7d0;
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+    .telegram-state {
+      color: #bbf7d0;
+      font-size: 0.68rem;
+      font-weight: 760;
+      white-space: nowrap;
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(2, 6, 23, 0.7);
+    }
+    .modal {
+      width: min(560px, 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0f172a;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+      padding: 14px;
+    }
+    .modal h2 { margin: 0 0 8px; font-size: 1rem; color: #e0f2fe; }
+    .modal-title { margin: 0 0 12px; color: var(--muted); font-size: 0.82rem; line-height: 1.4; }
+    .telegram-groups { display: grid; gap: 7px; max-height: 260px; overflow: auto; }
+    .telegram-group-option {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 7px;
+      background: rgba(15, 23, 42, 0.72);
+      padding: 8px;
+    }
+    .telegram-group-option input { width: auto; min-height: auto; }
+    .telegram-group-option strong { display: block; font-size: 0.84rem; }
+    .telegram-group-option span { display: block; color: var(--muted); font-size: 0.74rem; overflow-wrap: anywhere; }
+    .telegram-history { margin-top: 10px; color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
+    .modal-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 13px; }
+    .source-item {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr) 22px auto;
+      gap: 3px;
+      align-items: start;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      padding-bottom: 4px;
+    }
+    .empty {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--muted);
+      padding: 20px;
+      text-align: center;
+    }
+    .load-more { display: flex; justify-content: center; margin: 14px 0 0; }
+    .hidden { display: none !important; }
+    @media (max-width: 720px) {
+      body { font-size: 14px; }
+      .shell {
+        width: 100%;
+        max-width: 100%;
+        padding: 18px 9px 24px;
+        overflow: hidden;
       }
-
-      .bulletin-actions button,
-      .toolbar:not(.filters) button,
-      .toolbar:not(.filters) select,
-      .toolbar:not(.filters) input {
+      header { gap: 10px; margin-bottom: 10px; }
+      h1 { font-size: 1.42rem; }
+      .subtext { max-width: 320px; font-size: 0.86rem; line-height: 1.35; }
+      .search-row { grid-template-columns: 1fr; }
+      .search-row button[hidden] { display: none; }
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
         width: 100%;
       }
-      .intel-tabs.is-collapsed { max-height: 108px; }
-      .intel-tab { max-width: min(168px, 46vw); }
-      .news-main { padding-right: 60px; }
-      .title-row { align-items: flex-start; }
-      .title { font-size: 0.92rem; }
-      .summary { font-size: 0.78rem; -webkit-line-clamp: 2; }
-      .status { text-align: left; }
-      .heatmap-grid, .ticker-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .stream-filters { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 520px) {
-      .intel-tab { max-width: min(150px, 48vw); }
-      .heatmap-grid, .ticker-grid { grid-template-columns: 1fr; }
+      .tabs button {
+        width: 100%;
+        min-width: 0;
+        min-height: 34px;
+        padding-inline: 4px;
+        font-size: 0.76rem;
+        font-weight: 720;
+        border-color: rgba(148, 163, 184, 0.34);
+        background: rgba(15, 23, 42, 0.94);
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tabs button.active {
+        border-color: rgba(56, 189, 248, 0.95);
+        background: rgba(3, 105, 161, 0.68);
+        color: #f0f9ff;
+        box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.18);
+      }
+      .view-switch {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 96px));
+        justify-content: center;
+        width: 100%;
+        gap: 8px;
+      }
+      .view-switch button {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 6px;
+        font-size: 0.82rem;
+      }
+      .filters {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        width: 100%;
+      }
+      .filters select {
+        min-height: 34px;
+        padding-inline: 7px;
+        font-size: 0.76rem;
+        border-color: rgba(148, 163, 184, 0.34);
+      }
+      .status,
+      .summary {
+        display: none;
+      }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .news-row {
+        grid-template-columns: 28px minmax(0, 1fr) 22px;
+        column-gap: 2px;
+        row-gap: 0;
+        min-height: 0;
+        width: 100%;
+        max-width: 100%;
+        padding: 2px 0 3px;
+        overflow: hidden;
+      }
+      .news-row > * {
+        min-width: 0;
+        max-width: 100%;
+      }
+      .news-side {
+        width: 28px;
+        max-width: 28px;
+        overflow: hidden;
+      }
+      .news-code-cell {
+        font-size: 0.64rem;
+        line-height: 1.12;
+        overflow: hidden;
+        justify-self: start;
+      }
+      .news-main {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        gap: 0;
+      }
+      .news-title {
+        width: 100%;
+        max-width: calc(100vw - 76px);
+        font-size: 0.78rem;
+        line-height: 1.12;
+        overflow: hidden;
+        display: block;
+        contain: inline-size;
+      }
+      .news-title-text {
+        display: inline;
+      }
+      .news-title .news-source-inline {
+        font-size: 0.68rem;
+        margin-left: 6px;
+      }
+      .news-time {
+        font-size: 0.68rem;
+        line-height: 1.16;
+      }
+      .news-codes {
+        font-size: 0.64rem;
+        line-height: 1.12;
+      }
+      .news-source {
+        font-size: 0.66rem;
+        line-height: 1.12;
+      }
+      .news-meta { display: none; }
+      .source-board { grid-template-columns: 1fr; }
+      .source-item {
+        grid-template-columns: 28px minmax(0, 1fr) 22px;
+        gap: 2px;
+        overflow: hidden;
+      }
     }
   </style>
 </head>
@@ -881,1844 +442,1032 @@
   <main class="shell">
     <header>
       <div>
-        <h1>Broker News Dashboard</h1>
-        <p class="subtext">RSS → Firestore → bộ lọc tín hiệu tin tức cho tư vấn cá nhân</p>
+        <h1>Radar thị trường</h1>
+        <p class="subtext">Cập nhật tin tức đa nguồn hỗ trợ nhà đầu tư.</p>
       </div>
-      <div id="status" class="status">Đang tải dữ liệu Firestore...</div>
+      <div class="search-row">
+        <input id="search-input" type="search" placeholder="Tìm mã, tiêu đề, nguồn hoặc từ khóa...">
+        <button id="clear-search" type="button" hidden>Xóa</button>
+      </div>
     </header>
 
-    <section id="intel-tabs" class="intel-tabs is-collapsed" aria-label="Bộ lọc intelligence"></section>
-    <div class="tabs-actions">
-      <button id="tabs-toggle" class="tabs-toggle" type="button">Hiện thêm</button>
+    <nav id="channel-tabs" class="tabs" aria-label="Nhóm tin"></nav>
+    <section class="filters" aria-label="Bộ lọc">
+      <select id="sector-filter"><option value="all">Tất cả nhóm</option></select>
+      <select id="source-filter"><option value="all">Tất cả nguồn</option></select>
+      <select id="sort-filter">
+        <option value="newest">Mới nhất</option>
+        <option value="oldest">Cũ nhất</option>
+      </select>
+    </section>
+    <div class="view-switch">
+      <button id="view-news" type="button" class="active">News</button>
+      <button id="view-source" type="button">Nguồn</button>
+      <button id="refresh-button" type="button">Làm mới</button>
     </div>
-
-    <section class="toolbar filters" aria-label="Bộ lọc nhanh">
-      <div class="search-wrap">
-        <input id="ticker-search" type="search" placeholder="Tìm mã hoặc từ khóa: SSI, HPG, cổ tức...">
-        <button id="clear-search" class="clear-search" type="button" aria-label="Xóa tìm kiếm" hidden>×</button>
-      </div>
-      <select id="news-type-filter" class="advanced-filter" aria-label="Lọc loại tin"><option value="all">Tất cả loại tin</option></select>
-      <select id="sector-filter" class="advanced-filter" aria-label="Lọc ngành"><option value="all">Tất cả ngành</option></select>
-      <select id="market-sentiment-filter" class="advanced-filter" aria-label="Lọc trạng thái thị trường"><option value="all">Tất cả trạng thái</option></select>
-      <select id="impact-horizon-filter" class="advanced-filter" aria-label="Lọc thời hạn tác động"><option value="all">Tất cả thời hạn</option></select>
-      <select id="signal-strength-filter" class="advanced-filter" aria-label="Lọc độ mạnh tín hiệu"><option value="all">Tất cả tín hiệu</option></select>
-      <select id="broker-decision-filter" class="advanced-filter" aria-label="Lọc quyết định broker"><option value="all">Tất cả quyết định</option></select>
-      <select id="source-filter" class="advanced-filter" aria-label="Lọc nguồn"><option value="all">Tất cả nguồn</option></select>
-      <label class="toggle">
-        <input id="show-noise-toggle" type="checkbox">
-        Hiện tin nhiễu
-      </label>
-      <button id="reset-filters" class="reset-filters" type="button">Xóa bộ lọc</button>
-    </section>
-
-    <section id="summary" class="summary-grid"></section>
-
-    <section id="intel-dashboard" class="intel-dashboard"></section>
-
-    <section class="bulletin-actions">
-      <button id="timeline-toggle-button" type="button">Timeline</button>
-      <button id="bulletin-button" class="primary-action">Tạo bản tin broker hôm nay</button>
-      <button id="bulletin-toggle-button" hidden>Thu gọn bản tin</button>
-    </section>
-
-    <section id="bulletin" class="bulletin-panel">
-      <div id="bulletin-output" class="bulletin-content"></div>
-    </section>
-
-    <section class="stream-filters" aria-label="Bộ lọc stream tin nhanh">
-      <div class="stream-filter-group">
-        <div class="stream-filter-label">Mã A-Z</div>
-        <div id="letter-filter" class="letter-filter"></div>
-      </div>
-      <div class="stream-filter-group">
-        <div class="stream-filter-label">Sắp xếp</div>
-        <select id="time-filter" aria-label="Sắp xếp thời gian">
-          <option value="default">Mặc định</option>
-          <option value="newest">Mới nhất</option>
-          <option value="oldest">Cũ nhất</option>
-        </select>
-      </div>
-      <div class="stream-filter-group">
-        <div class="stream-filter-label">Điểm</div>
-        <select id="score-filter" aria-label="Sắp xếp điểm">
-          <option value="default">Mặc định</option>
-          <option value="score_desc">Điểm cao → thấp</option>
-          <option value="score_asc">Điểm thấp → cao</option>
-        </select>
-      </div>
-      <div class="stream-filter-group">
-        <div class="stream-filter-label">Nguồn</div>
-        <select id="source-scope-filter" aria-label="Phân tầng nguồn">
-          <option value="trusted">Chỉ nguồn uy tín</option>
-          <option value="extended">Bao gồm nguồn mở rộng</option>
-        </select>
-      </div>
-    </section>
-
-    <section id="active-filter-bar" class="active-filter-bar" aria-label="Bộ lọc đang bật" hidden></section>
-    <section id="new-news-notice" class="new-news-notice" aria-label="Tin mới" aria-live="polite" hidden>
-      <button id="new-news-button" type="button"></button>
-    </section>
-
+    <div id="status" class="status">Đang tải dữ liệu...</div>
+    <section id="summary" class="summary"></section>
     <section id="news-list" class="news-list"></section>
-    <section id="load-more-row" class="load-more-row" aria-live="polite" hidden>
-      <button id="load-more-button" class="load-more-button" type="button">Tải thêm</button>
-      <span id="load-more-status" class="load-more-status"></span>
+    <section class="load-more">
+      <button id="load-more" type="button" hidden>Tải thêm</button>
     </section>
-
-    <footer class="legal-disclaimer">
-      new24h chỉ tổng hợp tiêu đề, mô tả ngắn và liên kết về nguồn gốc. Bản quyền nội dung thuộc về cơ quan báo chí/đơn vị phát hành.
-    </footer>
   </main>
 
-  <div id="detail-backdrop" class="detail-backdrop" role="dialog" aria-modal="true" aria-label="Chi tiết tin">
-    <section class="detail-modal">
-      <div class="detail-head">
-        <h2 id="detail-title"></h2>
-        <button id="detail-close" type="button">Đóng</button>
+  <div id="telegram-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="telegram-modal-title">
+    <div class="modal">
+      <h2 id="telegram-modal-title">Đẩy Telegram</h2>
+      <p id="telegram-modal-news" class="modal-title"></p>
+      <div id="telegram-groups" class="telegram-groups"></div>
+      <div id="telegram-history" class="telegram-history"></div>
+      <div class="modal-actions">
+        <button id="telegram-cancel" type="button">Hủy</button>
+        <button id="telegram-send-all" class="telegram-action" type="button">📢 Gửi tất cả nhóm</button>
+        <button id="telegram-confirm" class="telegram-action" type="button">Xác nhận đẩy</button>
       </div>
-      <div id="detail-body" class="detail-body"></div>
-    </section>
+    </div>
   </div>
 
   <script>
-    const PAGE_SIZE = 50;
-    const RENDER_STEP = 60;
-    const MAX_MASTER_NEWS = 1000;
-    const NEWS_CACHE_KEY = "new24h.publicNewsCache.v1";
-    const AUTO_SYNC_INTERVAL_MS = 3 * 60 * 1000;
+    const PAGE_SIZE = 500;
+    const RENDER_STEP = 120;
+    const SOURCE_PREVIEW_LIMIT = 10;
+    const READ_LINKS_KEY = "radarMarket.readLinks.v1";
+    const ALLOWED_ADMIN_EMAILS = ["vvhoangvn@gmail.com"];
+    const CHANNELS = [
+      {id: "market", label: "Thị trường"},
+      {id: "stocks", label: "Cổ phiếu"},
+      {id: "fx", label: "FX/GOLD"},
+      {id: "all", label: "Tất cả"},
+    ];
 
+    let db = null;
+    let currentUser = null;
     const state = {
+      rawItems: [],
       items: [],
-      masterNewsStore: [],
-      pendingNewItems: [],
-      renderLimit: RENDER_STEP,
-      cacheUpdatedAt: null,
-      lastAutoSyncAt: null,
-      isSyncing: false,
-      syncTimer: null,
-      hasMore: false,
-      isLoadingMore: false,
-      firstPageReady: false,
-      filtered: [],
-      view: "all",
-      groups: [],
-      priority: "all",
-      newsType: "all",
+      adminOverrides: [],
+      telegramGroups: [],
+      telegramLogs: [],
+      telegramPushedNews: new Map(),
+      telegramAutoPushedNews: new Map(),
+      telegramAutoPushEnabled: false,
+      telegramAutoPushInFlight: false,
+      telegramAutoPushLastRunAt: 0,
+      telegramDialogNewsId: "",
+      isAdmin: false,
+      channel: "market",
+      view: "news",
+      query: "",
       sector: "all",
-      marketSentiment: "all",
-      impactHorizon: "all",
-      signalStrength: "all",
-      brokerDecision: "all",
       source: "all",
-      ticker: "",
-      summaryFilter: "all",
-      tickerLetter: "all",
-      timeSort: "default",
-      scoreSort: "default",
-      sourceScope: "trusted",
-      showNoise: false,
-      timelineMode: false,
-      bulletinGenerated: false,
-      bulletinCollapsed: false,
-      tabsExpanded: false,
+      sort: "newest",
+      renderLimit: RENDER_STEP,
+      expandedSources: new Set(),
+      readLinks: loadReadLinks(),
     };
 
-    let db;
+    const els = {
+      search: document.getElementById("search-input"),
+      clearSearch: document.getElementById("clear-search"),
+      channelTabs: document.getElementById("channel-tabs"),
+      sector: document.getElementById("sector-filter"),
+      source: document.getElementById("source-filter"),
+      sort: document.getElementById("sort-filter"),
+      viewNews: document.getElementById("view-news"),
+      viewSource: document.getElementById("view-source"),
+      refresh: document.getElementById("refresh-button"),
+      status: document.getElementById("status"),
+      summary: document.getElementById("summary"),
+      list: document.getElementById("news-list"),
+      loadMore: document.getElementById("load-more"),
+      telegramModal: document.getElementById("telegram-modal"),
+      telegramNews: document.getElementById("telegram-modal-news"),
+      telegramGroups: document.getElementById("telegram-groups"),
+      telegramHistory: document.getElementById("telegram-history"),
+      telegramCancel: document.getElementById("telegram-cancel"),
+      telegramSendAll: document.getElementById("telegram-send-all"),
+      telegramConfirm: document.getElementById("telegram-confirm"),
+    };
 
-    const statusEl = document.getElementById("status");
-    const tabsEl = document.getElementById("intel-tabs");
-    const tabsToggleEl = document.getElementById("tabs-toggle");
-    const summaryEl = document.getElementById("summary");
-    const dashboardEl = document.getElementById("intel-dashboard");
-    const listEl = document.getElementById("news-list");
-    const loadMoreRowEl = document.getElementById("load-more-row");
-    const loadMoreButtonEl = document.getElementById("load-more-button");
-    const loadMoreStatusEl = document.getElementById("load-more-status");
-    const newNewsNoticeEl = document.getElementById("new-news-notice");
-    const newNewsButtonEl = document.getElementById("new-news-button");
-    const letterFilterEl = document.getElementById("letter-filter");
-    const timeFilterEl = document.getElementById("time-filter");
-    const scoreFilterEl = document.getElementById("score-filter");
-    const sourceScopeFilterEl = document.getElementById("source-scope-filter");
-    const tickerSearchEl = document.getElementById("ticker-search");
-    const clearSearchEl = document.getElementById("clear-search");
-    const resetFiltersEl = document.getElementById("reset-filters");
-    const activeFilterBarEl = document.getElementById("active-filter-bar");
-    const newsTypeFilterEl = document.getElementById("news-type-filter");
-    const sectorFilterEl = document.getElementById("sector-filter");
-    const marketSentimentFilterEl = document.getElementById("market-sentiment-filter");
-    const impactHorizonFilterEl = document.getElementById("impact-horizon-filter");
-    const signalStrengthFilterEl = document.getElementById("signal-strength-filter");
-    const brokerDecisionFilterEl = document.getElementById("broker-decision-filter");
-    const sourceFilterEl = document.getElementById("source-filter");
-    const showNoiseToggleEl = document.getElementById("show-noise-toggle");
-    const bulletinEl = document.getElementById("bulletin");
-    const bulletinOutputEl = document.getElementById("bulletin-output");
-    const bulletinButtonEl = document.getElementById("bulletin-button");
-    const bulletinToggleButtonEl = document.getElementById("bulletin-toggle-button");
-    const timelineToggleButtonEl = document.getElementById("timeline-toggle-button");
-    const detailBackdropEl = document.getElementById("detail-backdrop");
-    const detailTitleEl = document.getElementById("detail-title");
-    const detailBodyEl = document.getElementById("detail-body");
-    const detailCloseEl = document.getElementById("detail-close");
-
-    function ensureFirebaseInitialized() {
-      if (!window.firebase || !firebase.firestore) return false;
-      if (!firebase.apps.length) {
-        firebase.initializeApp(window.NEW24H_FIREBASE_CONFIG);
-      }
-      return true;
+    function normalizeText(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\u0111/g, "d")
+        .replace(/\u0110/g, "D")
+        .toLowerCase();
     }
 
-    const INTEL_TAB_GROUPS = [
-      {
-        id: "market",
-        label: "Hành động / Thị trường",
-        primary: true,
-        tabs: [
-          {id: "all", label: "Tất cả", type: "all"},
-          {id: "extreme", label: "🔥 Cực nóng", type: "impact", value: "hot"},
-          {id: "watch", label: "⚠ Cần theo dõi", type: "impact", value: "watch"},
-          {id: "positive", label: "🟢 Tích cực", type: "sentiment", value: "positive"},
-          {id: "negative", label: "🔴 Tiêu cực", type: "sentiment", value: "negative"},
-          {id: "margin", label: "🚨 Margin / Giải chấp", type: "keyword", words: ["margin", "call margin", "giai chap"]},
-          {id: "bond_debt", label: "💣 Trái phiếu / Nợ", type: "eventSet", values: ["bond"]},
-          {id: "legal_risk", label: "⚖ Pháp lý / Thanh tra", type: "eventSet", values: ["legal", "court_dispute", "delisting"], words: ["thanh tra", "kiem toan", "xu phat"]},
-          {id: "etf_upgrade", label: "📊 ETF / Nâng hạng", type: "eventSet", values: ["etf", "index_rebalance"], words: ["msci", "ftse", "nang hang", "etf review"]},
-          {id: "gold_fx_crypto", label: "💵 FX / USD / Vàng / Crypto", type: "sectorEvent", sector: "gold_fx_crypto", values: ["fx", "gold_price", "crypto"]},
-          {id: "central_bank", label: "🏦 NHNN / Lãi suất", type: "scopeEvent", scope: "central_bank", values: ["fx_interest_rate", "bank_credit"]},
-        ],
-      },
-      {
-        id: "events",
-        label: "Sự kiện doanh nghiệp",
-        primary: true,
-        tabs: [
-          {id: "dividend", label: "💰 Cổ tức", type: "event", value: "dividend"},
-          {id: "ex_right", label: "📅 Chốt quyền", type: "event", value: "ex_right"},
-          {id: "earnings", label: "📑 KQKD / BCTC", type: "event", value: "earnings"},
-          {id: "ownership", label: "👤 Cổ đông lớn / Nội bộ", type: "eventSet", values: ["ownership", "insider_transaction"]},
-          {id: "project_invest", label: "🏗 Dự án / Đầu tư", type: "eventSet", values: ["project", "public_investment", "contract_order"]},
-        ],
-      },
-      {
-        id: "sectors",
-        label: "Ngành",
-        primary: false,
-        tabs: [
-          {id: "banking", label: "🏦 Ngân hàng", type: "sector", value: "banking"},
-          {id: "securities", label: "📈 Chứng khoán", type: "sector", value: "securities"},
-          {id: "real_estate", label: "🏠 Bất động sản", type: "sector", value: "real_estate"},
-          {id: "oil_gas", label: "🛢 Dầu khí", type: "sector", value: "oil_gas"},
-          {id: "steel", label: "⚙ Thép", type: "sector", value: "steel"},
-          {id: "port_logistics", label: "🚢 Cảng & Logistics", type: "sector", value: "port_logistics"},
-          {id: "fertilizer_chemical", label: "🌾 Phân bón & Hóa chất", type: "sector", value: "fertilizer_chemical"},
-          {id: "power", label: "⚡ Điện", type: "sector", value: "power"},
-          {id: "textile", label: "🧵 Dệt may", type: "sector", value: "textile"},
-          {id: "seafood", label: "🐟 Thủy sản", type: "sector", value: "seafood"},
-          {id: "retail", label: "🛒 Bán lẻ", type: "sector", value: "retail"},
-          {id: "industrial_park", label: "🏭 KCN", type: "sector", value: "industrial_park"},
-          {id: "technology_telecom", label: "📱 Công nghệ", type: "sector", value: "technology_telecom"},
-        ],
-      },
-      {
-        id: "macro",
-        label: "Vĩ mô / Bên ngoài",
-        primary: true,
-        tabs: [
-          {id: "government", label: "🏛 Chính phủ", type: "eventSet", values: ["government", "policy"]},
-          {id: "macro", label: "🌍 Vĩ mô", type: "sector", value: "macro"},
-          {id: "international", label: "🇺🇸 Quốc tế", type: "sector", value: "international"},
-          {id: "export", label: "📦 Xuất khẩu", type: "eventSet", values: ["export", "tax_tariff"]},
-        ],
-      },
-    ];
-    const INTEL_TABS = INTEL_TAB_GROUPS.flatMap((group) => group.tabs);
+    function normalizedTitleKey(value) {
+      return normalizeText(fixMojibake(value))
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
 
-    const LETTER_FILTERS = ["all", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")];
-
-    const SECTOR_LABELS = {
-      banking: "Ngân hàng",
-      securities: "Chứng khoán",
-      real_estate: "Bất động sản",
-      public_investment: "Đầu tư công",
-      oil_gas: "Dầu khí",
-      steel: "Thép",
-      port_logistics: "Cảng biển & Logistics",
-      fertilizer_chemical: "Phân bón & Hóa chất",
-      power: "Điện",
-      water: "Nước",
-      textile: "Dệt may",
-      seafood: "Thủy sản",
-      retail: "Bán lẻ",
-      aviation: "Hàng không",
-      industrial_park: "Khu công nghiệp",
-      technology_telecom: "Công nghệ & Viễn thông",
-      auto: "Ô tô",
-      construction_materials: "VLXD",
-      healthcare: "Y tế",
-      insurance: "Bảo hiểm",
-      consumer: "Tiêu dùng",
-      agriculture: "Nông nghiệp",
-      gold_fx_crypto: "Vàng/FX/Crypto",
-      macro: "Vĩ mô",
-      international: "Quốc tế",
-      other: "Khác",
-    };
-
-    const SECTOR_RULES = [
-      ["banking", ["banking", "ngan hang", "tin dung", "lai suat cho vay", "no xau", "casa"]],
-      ["securities", ["securities", "chung khoan", "cong ty chung khoan", "moi gioi", "margin", "vn-index", "thanh khoan"]],
-      ["real_estate", ["real_estate", "bat dong san", "dia oc", "nha o", "du an", "dat nen"]],
-      ["public_investment", ["public_investment", "dau tu cong", "cao toc", "ha tang", "san bay", "giai ngan"]],
-      ["oil_gas", ["oil_gas", "dau khi", "gas", "xang dau", "brent", "wti", "loc dau"]],
-      ["steel", ["steel", "thep", "ton ma", "hpg", "hsg", "nkg"]],
-      ["port_logistics", ["port_logistics", "cang", "logistics", "container", "van tai bien", "kho bai"]],
-      ["fertilizer_chemical", ["fertilizer_chemical", "phan bon", "hoa chat", "dgc", "dpm", "dcm"]],
-      ["power", ["power", "dien", "thuy dien", "nhiet dien", "dien gio", "dien mat troi", "pdp8"]],
-      ["water", ["water", "cap nuoc", "nuoc sach", "bwe", "tdw"]],
-      ["textile", ["textile", "det may", "xuat khau may", "soi", "tcm", "ms h"]],
-      ["seafood", ["seafood", "thuy san", "ca tra", "tom", "vhc", "anv"]],
-      ["retail", ["retail", "ban le", "sieu thi", "tieu dung", "mwg", "fpt retail", "pnj"]],
-      ["aviation", ["aviation", "hang khong", "san bay", "vjc", "hv n", "acv"]],
-      ["industrial_park", ["industrial_park", "khu cong nghiep", "kcn", "fdi", "dat kcn"]],
-      ["technology_telecom", ["technology", "technology_telecom", "cong nghe", "vien thong", "fpt", "ai", "du lieu", "data center", "chip"]],
-      ["auto", ["auto", "o to", "xe dien", "vinfast", "vfs", "phu tung"]],
-      ["macro", ["macro", "vi mo", "gdp", "cpi", "lam phat", "lai suat", "ty gia", "fed", "nhnn"]],
-      ["international", ["international", "quoc te", "my", "trung quoc", "fed", "dow jones", "nasdaq", "s&p", "global"]],
-    ];
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char]);
+    }
 
     function toDate(value) {
       if (!value) return null;
       if (typeof value.toDate === "function") return value.toDate();
-      if (Number.isFinite(value.seconds)) return new Date(value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1000000));
-      const parsed = new Date(value);
-      return Number.isNaN(parsed.getTime()) ? null : parsed;
+      const date = value instanceof Date ? value : new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
     }
 
-    function toCacheDate(value) {
+    function timeMs(value) {
       const date = toDate(value);
-      return date ? date.toISOString() : null;
+      return date ? date.getTime() : 0;
     }
 
     function formatTime(value) {
       const date = toDate(value);
-      if (!date) return "Chưa rõ thời gian";
-      return date.toLocaleString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      if (!date) return "--:--";
+      return date.toLocaleTimeString("vi-VN", {hour: "2-digit", minute: "2-digit", hour12: false});
     }
 
-    function escapeHtml(value) {
-      return String(value || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    function normalizeUrl(url) {
+      return String(url || "").split("#")[0].trim();
     }
 
-    function stripHtml(value) {
-      const div = document.createElement("div");
-      div.innerHTML = String(value || "");
-      return (div.textContent || div.innerText || "").replace(/\s+/g, " ").trim();
-    }
-
-    function legalSummary(value) {
-      const clean = String(value || "").replace(/\s+/g, " ").trim();
-      if (clean.length <= 300) return clean;
-      return `${clean.slice(0, 299).trimEnd()}…`;
-    }
-
-    const HSX_PUBLIC_URL = "https://www.hsx.vn/";
-
-    function isHsxSource(item) {
-      const sourceText = String(item.source || item.sourceName || "").toLowerCase();
-      return sourceText.includes("hose") || sourceText.includes("hsx");
-    }
-
-    function isHsxApiUrl(url) {
+    function loadReadLinks() {
       try {
-        const parsed = new URL(String(url || ""));
-        const host = parsed.hostname.toLowerCase();
-        const path = parsed.pathname.toLowerCase();
-        return host === "api.hsx.vn" || (host.endsWith("hsx.vn") && path.includes("/api/"));
-      } catch (error) {
-        return false;
+        const parsed = JSON.parse(localStorage.getItem(READ_LINKS_KEY) || "[]");
+        return new Set(Array.isArray(parsed) ? parsed.map(normalizeUrl).filter(Boolean) : []);
+      } catch {
+        return new Set();
       }
     }
 
-    function toPublicHsxUrl(rawUrl) {
+    function saveReadLinks() {
       try {
-        const parsed = new URL(String(rawUrl || ""));
-        if (parsed.hostname.toLowerCase() === "api.hsx.vn" && parsed.pathname.toLowerCase().startsWith("/tin-tuc/")) {
-          parsed.hostname = "www.hsx.vn";
-          return parsed.href;
-        }
-      } catch (error) {
-        return "";
+        localStorage.setItem(READ_LINKS_KEY, JSON.stringify(Array.from(state.readLinks).slice(-1000)));
+      } catch {}
+    }
+
+    function markRead(url) {
+      const key = normalizeUrl(url);
+      if (!key) return;
+      state.readLinks.add(key);
+      saveReadLinks();
+    }
+
+    function readablePublicUrl(url) {
+      const value = String(url || "").trim();
+      if (/^https?:\/\/api\.hsx\.vn\/tin-tuc\//i.test(value)) {
+        return value.replace(/^https?:\/\/api\.hsx\.vn/i, "https://www.hsx.vn");
+      }
+      if (/^https?:\/\/www\.hnx\.vn:7978\//i.test(value)) {
+        return value.replace(/^https?:\/\/www\.hnx\.vn:7978/i, "https://www.hnx.vn");
+      }
+      if (/^https?:\/\/hnx\.vn:7978\//i.test(value)) {
+        return value.replace(/^https?:\/\/hnx\.vn:7978/i, "https://www.hnx.vn");
       }
       return "";
     }
 
-    function isFeedUrl(url) {
-      return /\.rss(?:$|[?#])/i.test(String(url || "")) || /\/News\/NewsByCateFeed\//i.test(String(url || ""));
+    function itemUrl(item) {
+      const candidates = [item.publicUrl, item.displayUrl, item.link, item.url, item.originalUrl, item.canonicalUrl];
+      const fixedUrl = candidates.map(readablePublicUrl).find(Boolean);
+      if (fixedUrl) return fixedUrl;
+      const directUrl = candidates.find((url) => String(url || "").trim());
+      if (directUrl) return directUrl;
+      return "";
     }
 
-    function safeArticleUrl(item) {
-      const url = String(item.canonicalUrl || item.url || item.originalUrl || item.link || "").trim();
-      const publicHsxUrl = toPublicHsxUrl(url);
-      if (publicHsxUrl) {
-        return publicHsxUrl;
+    function shortSource(source) {
+      const value = String(source || "Unknown").trim();
+      if (/^HOSE|^HSX/i.test(value)) return "HOSE";
+      if (/^HNX/i.test(value)) return "HNX";
+      if (/^VnEconomy/i.test(value)) return "VnEconomy";
+      if (/^Vietstock/i.test(value)) return "Vietstock";
+      if (/^CoinDesk/i.test(value)) return "CoinDesk";
+      if (/^Cointelegraph/i.test(value)) return "Cointelegraph";
+      if (/^CryptoSlate/i.test(value)) return "CryptoSlate";
+      if (/^Cryptonews/i.test(value)) return "Cryptonews";
+      if (/^Bitcoin News/i.test(value)) return "Bitcoin News";
+      return value.split(/\s+-\s+|\s+\|\s+/)[0] || value;
+    }
+
+    function itemSource(item) {
+      const fields = [
+        item.sourceId,
+        item.sourceUrl,
+        item.publicUrl,
+        item.displayUrl,
+        item.link,
+        item.url,
+        item.originalUrl,
+        item.canonicalUrl,
+        item.sourceName,
+        item.source,
+        item.originalSource,
+      ];
+      const text = normalizeText(fields.filter(Boolean).join(" "));
+      if (/\bhnx\b|hnx\.vn|hnx_/.test(text)) return "HNX";
+      if (/\bhose\b|\bhsx\b|api\.hsx\.vn|hsx\.vn|hose_/.test(text)) return "HOSE";
+      return shortSource(item.source || item.sourceName || item.originalSource);
+    }
+
+    function listField(item, keys) {
+      for (const key of keys) {
+        const value = item[key];
+        if (Array.isArray(value) && value.length) return value.filter(Boolean);
+        if (value) return [value];
       }
-      if (isHsxSource(item) && (!url || isFeedUrl(url))) {
-        return HSX_PUBLIC_URL;
+      return [];
+    }
+
+    function unique(values) {
+      return Array.from(new Set(values.map((value) => String(value || "").trim()).filter(Boolean)));
+    }
+
+    function fixMojibake(value) {
+      return String(value || "")
+        .replace(/Chá»©ng khoÃ¡n/g, "Chứng khoán")
+        .replace(/Thá»‹ trÆ°á»ng/g, "Thị trường")
+        .replace(/TÃ i chÃ­nh/g, "Tài chính")
+        .replace(/VÄ© mÃ´/g, "Vĩ mô")
+        .replace(/Doanh nghiá»‡p/g, "Doanh nghiệp")
+        .replace(/Báº¥t Ä‘á»™ng sáº£n/g, "Bất động sản")
+        .replace(/PhÃ¢n tÃ­ch/g, "Phân tích")
+        .replace(/PhÃ¡p luáº­t/g, "Pháp luật")
+        .replace(/Äá»i sá»‘ng/g, "Đời sống")
+        .replace(/GiÃ¡o dá»¥c/g, "Giáo dục")
+        .replace(/Dáº§u khÃ­/g, "Dầu khí")
+        .replace(/ThÃ©p/g, "Thép")
+        .replace(/Chá»©ng khoÃ¡n/g, "Chứng khoán");
+    }
+
+    const CRYPTO_TICKERS = new Set([
+      "BTC", "ETH", "XRP", "BNB", "SOL", "ADA", "DOGE", "TRX", "TON", "AVAX",
+      "LINK", "DOT", "MATIC", "POL", "LTC", "BCH", "UNI", "AAVE", "ATOM",
+      "NEAR", "ICP", "APT", "SUI", "ARB", "OP", "ETC", "FIL", "XLM",
+      "USDT", "USDC", "DAI", "FDUSD", "USD", "EUR", "DXY", "XAU", "XAG", "GOLD"
+    ]);
+
+    function cryptoLikeSource(item) {
+      const text = normalizeText([
+        item.source,
+        item.sourceName,
+        item.sourceId,
+        item.originalSource,
+        itemSector(item),
+      ].filter(Boolean).join(" "));
+      return /coindesk|cryptoslate|cryptonews|cointelegraph|bitcoin news|bitcoin_news|crypto|bitcoin|fx|gold/.test(text);
+    }
+
+    function titlePrefixTickers(item) {
+      const titles = unique([
+        item.titleOriginal,
+        item.originalTitle,
+        item.title,
+        displayTitle(item),
+      ]);
+      return unique([
+        ...titles
+        .map((title) => String(title || "").match(/^\s*([A-Z][A-Z0-9]{1,11})\s*[:：]/)?.[1])
+          .filter(Boolean),
+        ...titles.map(warrantTickerFromTitle).filter(Boolean),
+      ]);
+    }
+
+    function warrantTickerFromTitle(title) {
+      const raw = String(title || "");
+      if (!/\bch(?:u|ư)ng\s+quy(?:e|ề)n\b|\bchung\s+quyen\b/i.test(normalizeText(raw))) return "";
+      const dotted = raw.match(/\b([A-Z]{2,5})\.[A-Z0-9]{2,}(?:\.|$)/);
+      if (dotted) return dotted[1].toUpperCase();
+      const afterPhrase = raw.match(/ch(?:ứ|u)ng\s+quy(?:ề|e)n[^A-Z0-9]{0,40}\b([A-Z]{2,5})\b/i);
+      return afterPhrase ? afterPhrase[1].toUpperCase() : "";
+    }
+
+    function firstCodeFromTitle(title) {
+      const blocked = new Set(["HOSE", "HNX", "UPCOM", "ETF", "VN", "USD", "VND", "CEO", "HĐQT", "HDQT", "ĐHĐCĐ", "DHDCD"]);
+      const matches = String(title || "").match(/\b[A-Z]{2,5}\b/g) || [];
+      return matches.find((code) => !blocked.has(code.toUpperCase())) || "";
+    }
+
+    function dottedUnderlyingFromTitle(title) {
+      return String(title || "").match(/\b([A-Z]{2,5})\.[A-Z0-9]{2,}(?:\.|$)/)?.[1]?.toUpperCase() || "";
+    }
+
+    function autoTickerFromRule(rule, item) {
+      const title = [
+        item.titleOriginal,
+        item.originalTitle,
+        item.title,
+        displayTitle(item),
+      ].filter(Boolean).join(" ");
+      const mode = rule.autoTickerMode || "";
+      if (!mode) return [];
+      if (mode === "warrant_underlying") return [warrantTickerFromTitle(title)].filter(Boolean);
+      if (mode === "dotted_underlying") return [dottedUnderlyingFromTitle(title)].filter(Boolean);
+      if (mode === "first_code") return [firstCodeFromTitle(title)].filter(Boolean);
+      if (mode === "regex" && rule.autoTickerRegex) {
+        try {
+          const match = title.match(new RegExp(rule.autoTickerRegex, "i"));
+          return [match?.[1] || match?.[0]].filter(Boolean).map((code) => String(code).toUpperCase());
+        } catch {
+          return [];
+        }
       }
-      return /^https?:\/\//i.test(url) && !isFeedUrl(url) ? url : "";
+      return [];
     }
 
-    function hashText(value) {
-      const text = normalizedText(value).replace(/\s+/g, " ").trim();
-      let hash = 0;
-      for (let index = 0; index < text.length; index += 1) {
-        hash = ((hash << 5) - hash + text.charCodeAt(index)) | 0;
-      }
-      return Math.abs(hash).toString(36);
-    }
-
-    function timestampMs(value) {
-      return toDate(value)?.getTime() || 0;
-    }
-
-    function sourceTierFor(item) {
-      const source = normalizedText(`${item.source || ""} ${item.sourceName || ""}`);
-      if (/\b(hose|hsx|hnx|ssc|vsdc|ubck|so giao dich|cong bo thong tin)\b/.test(source)) return 1;
-      if (/\b(vietstock|cafef|stockbiz|vneconomy|ndh|fili)\b/.test(source)) return 2;
-      if (/\b(vietnamfinance|bao dau tu|nhịp sống thị trường|nhip song thi truong)\b/.test(source)) return 3;
-      return 4;
-    }
-
-    function sourceWeightForTier(tier) {
-      return {1: 100, 2: 82, 3: 58, 4: 36}[tier] || 30;
-    }
-
-    function hasImage(item) {
-      return Boolean(item.image || item.thumbnail || item.imageUrl || item.coverUrl);
-    }
-
-    function qualityScoreFor(item, duplicatePenalty = 0) {
-      const tier = Number(item.sourceTier || sourceTierFor(item));
-      const titleLength = String(item.title || "").trim().length;
-      const summaryLength = String(item.summary || "").trim().length;
-      const ageHours = timestampMs(item.publishedAt || item.createdAt)
-        ? Math.max(0, (Date.now() - timestampMs(item.publishedAt || item.createdAt)) / 3600000)
-        : 999;
-      let score = sourceWeightForTier(tier);
-      if (ageHours <= 1) score += 18;
-      else if (ageHours <= 6) score += 12;
-      else if (ageHours <= 24) score += 7;
-      else if (ageHours <= 72) score += 3;
-      if (titleLength >= 35) score += 10;
-      else if (titleLength < 16) score -= 18;
-      if (summaryLength >= 60) score += 10;
-      else if (summaryLength > 0) score += 4;
-      if (itemTickers(item).length) score += 9;
-      if (Array.isArray(item.keywords) && item.keywords.length) score += 5;
-      if (hasImage(item)) score += 3;
-      if (/quảng cáo|khuyến mãi|giảm giá|mua ngay/i.test(item.title || "")) score -= 16;
-      return Math.max(0, Math.min(100, score - duplicatePenalty));
-    }
-
-    function normalizeNewsItem(raw) {
-      const item = {...raw};
-      item.id = String(item.id || item.docId || safeArticleUrl(item) || hashText(`${item.title || ""} ${item.publishedAt || ""}`));
-      item.link = safeArticleUrl(item) || item.link || item.originalUrl || item.url || "";
-      item.originalUrl = item.originalUrl || item.link || item.url || "";
-      item.source = item.source || item.sourceName || "Unknown";
-      item.summary = legalSummary(item.summary || item.description || item.contentSnippet || "");
-      item.publishedAt = item.publishedAt || item.createdAt || null;
-      item.createdAt = item.createdAt || item.publishedAt || null;
-      item.titleHash = item.titleHash || hashText(item.title || "");
-      item.contentHash = item.contentHash || hashText(`${item.title || ""} ${item.summary || ""}`);
-      item.sourceTier = Number(item.sourceTier || sourceTierFor(item));
-      item.sourceWeight = Number(item.sourceWeight || sourceWeightForTier(item.sourceTier));
-      item.newsQualityScore = Number(item.newsQualityScore || qualityScoreFor(item));
-      item.relatedSources = Array.isArray(item.relatedSources) ? item.relatedSources : [];
-      return item;
-    }
-
-    function duplicateKeysFor(item) {
-      return [
-        item.id ? `id:${item.id}` : "",
-        item.link ? `link:${normalizedText(item.link)}` : "",
-        item.originalUrl ? `link:${normalizedText(item.originalUrl)}` : "",
-        item.titleHash ? `title:${item.titleHash}` : "",
-        item.contentHash ? `content:${item.contentHash}` : "",
-      ].filter(Boolean);
-    }
-
-    function betterNewsItem(left, right) {
-      const leftScore = Number(left.newsQualityScore || qualityScoreFor(left));
-      const rightScore = Number(right.newsQualityScore || qualityScoreFor(right));
-      if (rightScore !== leftScore) return rightScore > leftScore ? right : left;
-      const sourceDiff = Number(right.sourceWeight || 0) - Number(left.sourceWeight || 0);
-      if (sourceDiff !== 0) return sourceDiff > 0 ? right : left;
-      const lengthDiff = String(right.summary || "").length - String(left.summary || "").length;
-      if (lengthDiff !== 0) return lengthDiff > 0 ? right : left;
-      if (hasImage(right) !== hasImage(left)) return hasImage(right) ? right : left;
-      return timestampMs(right.publishedAt || right.createdAt) > timestampMs(left.publishedAt || left.createdAt) ? right : left;
-    }
-
-    function uniq(values) {
-      return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
-    }
-
-    function priorityOf(item) {
-      return item.priorityLabel || item.riskLevel || "normal";
-    }
-
-    function scoreValue(item) {
-      const impactScore = Number.isFinite(item.impactScore) ? item.impactScore : Number(item.impactScore || 0);
-      const finalScore = Number.isFinite(item.finalScore) ? item.finalScore : Number(item.finalScore || 0);
-      return Math.max(impactScore || 0, finalScore || 0);
-    }
-
-    function rankScore(item) {
-      const impactScore = Number.isFinite(item.impactScore) ? item.impactScore : Number(item.impactScore || 0);
-      const analyzerScore = Number.isFinite(item.finalScore) ? item.finalScore : impactScore;
-      const publishedAt = toDate(item.publishedAt);
-      const ageMinutes = publishedAt ? Math.max(0, (Date.now() - publishedAt.getTime()) / 60000) : Number.POSITIVE_INFINITY;
-      let freshnessBoost = 0;
-
-      if (ageMinutes <= 30) freshnessBoost = 24;
-      else if (ageMinutes <= 120) freshnessBoost = 18;
-      else if (ageMinutes <= 360) freshnessBoost = 12;
-      else if (ageMinutes <= 1440) freshnessBoost = 7;
-      else if (ageMinutes <= 4320) freshnessBoost = 3;
-
-      return Math.max(impactScore, analyzerScore) + freshnessBoost;
-    }
-
-    function itemTime(item) {
-      return toDate(item.publishedAt) || toDate(item.createdAt);
+    function isWarrantTitle(item) {
+      return Boolean(warrantTickerFromTitle([
+        item.titleOriginal,
+        item.originalTitle,
+        item.title,
+        displayTitle(item),
+      ].filter(Boolean).join(" ")));
     }
 
     function itemTickers(item) {
-      const {ticker} = splitTitleTicker(item);
-      const tickers = Array.isArray(item.tickers) ? item.tickers.filter(Boolean) : [];
-      const related = Array.isArray(item.relatedStocks) ? item.relatedStocks.filter(Boolean) : [];
-      return uniq([ticker, ...tickers, ...related].map((value) => String(value || "").toUpperCase()));
+      const storedCodes = (item.adminOverrideApplied || item.isManual)
+        ? [
+          ...listField(item, ["primaryTickers", "finalTickers", "tickers"]),
+          item.primaryTicker,
+          ...listField(item, ["relatedStocks", "relatedTickers", "watchlistStocks"]),
+        ]
+        : [];
+      const codes = unique([
+        ...titlePrefixTickers(item),
+        ...storedCodes,
+      ]).map((code) => code.toUpperCase()).filter((code) => /^[A-Z0-9]{2,12}$/.test(code));
+      return cryptoLikeSource(item) ? codes.filter((code) => CRYPTO_TICKERS.has(code)) : codes;
     }
 
-    function scoreClass(score) {
-      if (score >= 70) return "hot";
-      if (score >= 45) return "watch";
-      return "neutral";
+    function itemSector(item) {
+      if (isWarrantTitle(item)) return "Chứng khoán";
+      return fixMojibake(item.finalSector || item.sector || item.categoryGroup || item.category || "Khác");
     }
 
-    function relativeTime(value) {
-      const date = toDate(value);
-      if (!date) return "";
-      const diffMinutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-      if (diffMinutes < 1) return "vừa xong";
-      if (diffMinutes < 60) return `${diffMinutes} phút trước`;
-      const diffHours = Math.floor(diffMinutes / 60);
-      if (diffHours < 24) return `${diffHours} giờ trước`;
-      return date.toLocaleString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        day: "2-digit",
-        month: "2-digit",
+    function displayTitle(item) {
+      return item.titleVi || item.translatedTitle || item.title || item.titleOriginal || "Không có tiêu đề";
+    }
+
+    function duplicateTitleKey(item) {
+      return normalizedTitleKey([
+        displayTitle(item),
+        item.title,
+        item.titleOriginal,
+        item.originalTitle,
+      ].filter(Boolean)[0]);
+    }
+
+    function displaySummary(item) {
+      return item.summaryVi || item.translatedSummary || item.summary || item.shortDescription || item.description || "";
+    }
+
+    function telegramLogsForNews(newsId) {
+      return state.telegramLogs.filter((log) => log.newsId === newsId);
+    }
+
+    function telegramGroupName(groupId) {
+      const group = state.telegramGroups.find((item) => item.id === groupId);
+      return group?.name || groupId;
+    }
+
+    function telegramHistoryText(newsId) {
+      const autoPush = state.telegramAutoPushedNews.get(newsId);
+      if (autoPush) return `Đã tự đẩy Telegram: ${autoPush.join(", ")}`;
+      const localPush = state.telegramPushedNews.get(newsId);
+      if (localPush) return `Đã đẩy Telegram: ${localPush.join(", ")}`;
+      const logs = telegramLogsForNews(newsId).filter((log) => log.status === "success" || log.status === "partial");
+      if (!logs.length) return "";
+      const names = unique(logs.flatMap((log) => Array.isArray(log.groupIds) ? log.groupIds.map(telegramGroupName) : []));
+      return names.length ? `Đã đẩy Telegram: ${names.join(", ")}` : "Đã đẩy Telegram";
+    }
+
+    function telegramActionHtml(item) {
+      if (!state.isAdmin) return "";
+      const pushed = telegramHistoryText(item.id);
+      const autoPushed = state.telegramAutoPushedNews.has(item.id);
+      return `
+        ${pushed ? `<span class="telegram-state" title="${escapeHtml(pushed)}">${autoPushed ? "Đã tự đẩy Telegram" : "Đã đẩy Telegram"}</span>` : ""}
+        <button class="telegram-action" type="button" data-telegram-push="${escapeHtml(item.id)}">Đẩy Telegram</button>
+      `;
+    }
+
+    function searchableText(item) {
+      return normalizeText([
+        displayTitle(item),
+        item.title,
+        item.titleOriginal,
+        item.originalTitle,
+        displaySummary(item),
+        item.source,
+        item.sourceName,
+        item.sourceId,
+        itemSector(item),
+        item.category,
+        item.eventType,
+        item.newsType,
+        itemTickers(item).join(" "),
+      ].filter(Boolean).join(" "));
+    }
+
+    function titleSearchText(item) {
+      return normalizeText([
+        displayTitle(item),
+        item.title,
+        item.titleOriginal,
+        item.originalTitle,
+      ].filter(Boolean).join(" "));
+    }
+
+    function phraseExpressionMatches(target, phraseSlots = [], joiners = []) {
+      const slots = phraseSlots.map((phrase, index) => ({phrase, index})).filter((slot) => slot.phrase);
+      if (!slots.length) return false;
+      const groups = [[]];
+      slots.forEach((slot, slotIndex) => {
+        if (slotIndex > 0) {
+          const previousOriginalIndex = slots[slotIndex - 1].index;
+          if ((joiners[previousOriginalIndex] || "AND") === "OR") groups.push([]);
+        }
+        groups[groups.length - 1].push(slot.phrase);
       });
+      return groups.some((group) => group.every((phrase) => target.includes(phrase)));
     }
 
-    function shortSource(value) {
-      return String(value || "Unknown")
-        .replace(/^HOSE\s*-\s*/i, "HOSE")
-        .replace(/^HNX\s*-\s*/i, "HNX")
-        .replace(/^VnEconomy\s*-\s*/i, "VnEconomy");
-    }
-
-    function splitTitleTicker(item) {
-      const rawTitle = String(item.title || "Không có tiêu đề").trim();
-      const prefixMatch = rawTitle.match(/^\s*([A-Z0-9]{2,10})\s*[:：-]\s*(.+)$/);
-      const tickers = Array.isArray(item.tickers) ? item.tickers.filter(Boolean) : [];
-      return {
-        ticker: prefixMatch?.[1] || tickers[0] || "",
-        title: prefixMatch?.[2] || rawTitle,
-      };
-    }
-
-    function normalizedText(value) {
-      return String(value || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/đ/g, "d")
-        .replace(/Đ/g, "D")
-        .toLowerCase();
-    }
-
-    function itemText(item) {
-      return normalizedText(`${item.title || ""} ${item.summary || ""} ${item.source || ""} ${(item.keywords || []).join(" ")} ${(item.sectors || []).join(" ")}`);
-    }
-
-    function firstMatchingRule(text, rules) {
-      const match = rules.find(([, words]) => words.some((word) => text.includes(normalizedText(word))));
-      return match ? match[0] : null;
-    }
-
-    function deriveSector(item) {
-      if (item.sector && SECTOR_LABELS[item.sector]) return item.sector;
-      const text = itemText(item);
-      const sectors = Array.isArray(item.sectors) ? item.sectors : [];
-      const fromAnalyzer = sectors.find((sector) => SECTOR_LABELS[sector]);
-      if (fromAnalyzer) return fromAnalyzer;
-      if ((item.group || "").toLowerCase() === "international") return "international";
-      return firstMatchingRule(text, SECTOR_RULES) || "macro";
-    }
-
-    function deriveSentiment(item) {
-      if (["positive", "negative", "neutral"].includes(item.sentiment)) return item.sentiment;
-      const raw = String(item.marketSentiment || item.sentiment || "").toLowerCase();
-      const text = itemText(item);
-      if (/positive|bullish|risk_on/.test(raw) || text.includes("tich cuc") || text.includes("tang manh") || text.includes("vuot ke hoach") || text.includes("lai lon")) return "positive";
-      if (/negative|bearish|risk_off|panic/.test(raw) || text.includes("tieu cuc") || text.includes("giam manh") || text.includes("rui ro") || text.includes("dinh chi") || text.includes("thua lo")) return "negative";
-      return "neutral";
-    }
-
-    function deriveImpactLevel(item) {
-      if (["hot", "watch", "normal", "noise"].includes(item.impactLevel)) return item.impactLevel;
-      const score = Number.isFinite(item.impactScore) ? item.impactScore : Number(item.finalScore || 0);
-      if (item.priorityLabel === "hot" || item.signalStrength === "strong" || score >= 70) return "hot";
-      if (item.priorityLabel === "watch" || item.priorityLabel === "important" || item.brokerDecision === "watchlist_candidate" || score >= 45) return "watch";
-      return "normal";
-    }
-
-    function deriveEventType(item) {
-      if (item.eventType) return item.eventType;
-      const text = itemText(item);
-      if (text.includes("chot quyen") || text.includes("dkcc") || text.includes("ngay dang ky cuoi cung")) return "ex_right";
-      if (text.includes("co tuc") || text.includes("tra co") || text.includes("tam ung")) return "dividend";
-      if (text.includes("bo nhiem") || text.includes("mien nhiem") || text.includes("chu tich") || text.includes("tong giam doc") || text.includes("chinh sach")) return "leadership_policy";
-      if (text.includes("chinh phu") || text.includes("thu tuong") || text.includes("quoc hoi") || text.includes("bo tai chinh")) return "government";
-      if (text.includes("ty gia") || text.includes("lai suat") || text.includes("fed") || text.includes("nhnn")) return "fx_interest_rate";
-      if (text.includes("xuat khau") || text.includes("don hang") || text.includes("thi truong my") || text.includes("eu")) return "export";
-      return null;
-    }
-
-    function getIntelFields(item) {
-      return {
-        categoryGroup: deriveSector(item),
-        sector: deriveSector(item),
-        sentiment: deriveSentiment(item),
-        impactLevel: deriveImpactLevel(item),
-        eventType: deriveEventType(item),
-      };
-    }
-
-    function tabKeywordMatch(item, words = []) {
-      if (!words.length) return false;
-      const text = itemText(item);
-      return words.some((word) => text.includes(normalizedText(word)));
-    }
-
-    function tabMatchesItem(item, activeTab) {
-      const fields = getIntelFields(item);
-      const score = Number.isFinite(item.impactScore) ? item.impactScore : Number(item.finalScore || 0);
-      const eventType = fields.eventType || null;
-      const marketScope = item.marketScope || null;
-
-      if (!activeTab || activeTab.type === "all") return true;
-      if (activeTab.type === "impact" && activeTab.value === "hot") return fields.impactLevel === "hot" || score >= 70;
-      if (activeTab.type === "impact" && activeTab.value === "watch") return fields.impactLevel === "watch";
-      if (activeTab.type === "sentiment") return fields.sentiment === activeTab.value;
-      if (activeTab.type === "event") return fields.eventType === activeTab.value;
-      if (activeTab.type === "eventSet") {
-        return (activeTab.values || []).includes(eventType) || tabKeywordMatch(item, activeTab.words);
-      }
-      if (activeTab.type === "sector") return fields.sector === activeTab.value;
-      if (activeTab.type === "keyword") return tabKeywordMatch(item, activeTab.words);
-      if (activeTab.type === "sectorEvent") {
-        return fields.sector === activeTab.sector || (activeTab.values || []).includes(eventType);
-      }
-      if (activeTab.type === "scopeEvent") {
-        return marketScope === activeTab.scope || (activeTab.values || []).includes(eventType);
-      }
-      return true;
-    }
-
-    function tabMatches(item) {
-      return tabMatchesItem(item, INTEL_TABS.find((tab) => tab.id === state.view));
-    }
-
-    function groupKey(item) {
-      if (item.clusterId) return item.clusterId;
-      const {ticker, title} = splitTitleTicker(item);
-      const compactTitle = normalizedText(title)
-        .replace(/\b(cbtt|thong bao|bao cao|nghi quyet|quyet dinh)\b/g, "")
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim()
-        .slice(0, 72);
-      return `${ticker || "NO_TICKER"}|${compactTitle}`;
-    }
-
-    function tickerWeight(item) {
-      const tickers = Array.isArray(item.tickers) ? item.tickers : [];
-      const major = new Set(["VCB", "BID", "CTG", "MBB", "TCB", "HPG", "FPT", "VIC", "VHM", "VNM", "GAS", "SSI", "VND"]);
-      return tickers.reduce((sum, ticker) => sum + (major.has(String(ticker).toUpperCase()) ? 8 : 3), 0);
-    }
-
-    function groupRank(group) {
-      const item = group.primary;
-      const duplicateBoost = Math.min(18, ((group.duplicateCount || group.items.length) - 1) * 6);
-      return rankScore(item) + duplicateBoost + tickerWeight(item);
-    }
-
-    function groupItems(items) {
-      const map = new Map();
-      items.forEach((item) => {
-        const key = groupKey(item);
-        const entry = map.get(key) || {key, items: [], sources: new Set(), urls: new Map()};
-        entry.items.push(item);
-        entry.sources.add(item.source || "Unknown");
-        if (Array.isArray(item.sources)) item.sources.forEach((source) => entry.sources.add(source || "Unknown"));
-        const url = safeArticleUrl(item);
-        if (url) entry.urls.set(url, item.source || url);
-        if (Array.isArray(item.sourceUrls)) item.sourceUrls.forEach((sourceUrl, index) => {
-          if (sourceUrl) entry.urls.set(sourceUrl, Array.isArray(item.sources) ? (item.sources[index] || sourceUrl) : sourceUrl);
+    function adminOverrideMatches(rule, item) {
+      if (!rule || rule.active === false) return false;
+      const target = normalizeText(rule.scope === "full_text"
+        ? `${displayTitle(item)} ${item.title || ""} ${item.titleOriginal || ""} ${displaySummary(item)}`
+        : `${displayTitle(item)} ${item.title || ""} ${item.titleOriginal || ""}`)
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!target) return false;
+      const phraseSlots = (Array.isArray(rule.normalizedPhraseSlots) && rule.normalizedPhraseSlots.length ? rule.normalizedPhraseSlots : (rule.phraseSlots || []).map(normalizeText))
+        .map((phrase) => normalizeText(phrase).replace(/\s+/g, " ").trim());
+      if (phraseSlots.some(Boolean)) return phraseExpressionMatches(target, phraseSlots, rule.phraseJoiners || ["AND", "AND"]);
+      const phrases = (rule.normalizedPhrases && rule.normalizedPhrases.length ? rule.normalizedPhrases : (rule.phrases || [rule.titlePattern]).map(normalizeText))
+        .map((phrase) => normalizeText(phrase).replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      if (!phrases.length) return false;
+      const mode = rule.matchMode || (phrases.length > 1 ? "ordered_terms" : "contains_phrase");
+      if (mode === "exact_title") return target === phrases[0];
+      if (mode === "starts_with") return target.startsWith(phrases[0]);
+      if (mode === "all_terms") return phrases.every((phrase) => target.includes(phrase));
+      if (mode === "ordered_terms") {
+        let from = 0;
+        return phrases.every((phrase) => {
+          const index = target.indexOf(phrase, from);
+          if (index < 0) return false;
+          from = index + phrase.length;
+          return true;
         });
-        map.set(key, entry);
-      });
-
-      return Array.from(map.values()).map((group) => {
-        group.items.sort(compareItems);
-        group.primary = group.items[0];
-        group.duplicateCount = Math.max(group.items.length, Number(group.primary.duplicateCount || 1));
-        group.rank = groupRank(group);
-        return group;
-      }).sort((left, right) => {
-        const itemDiff = compareItems(left.primary, right.primary);
-        if (itemDiff !== 0) return itemDiff;
-        return right.rank - left.rank;
-      });
-    }
-
-    function itemMatchesNonTabFilters(item) {
-      const sectors = Array.isArray(item.sectors) ? item.sectors : [];
-      const priority = priorityOf(item);
-      const source = item.source || "Unknown";
-
-      if (!state.showNoise && state.summaryFilter !== "hidden" && isNoiseItem(item)) return false;
-      if (state.sourceScope === "trusted" && Number(item.sourceTier || sourceTierFor(item)) > 2) return false;
-      if (state.priority !== "all" && state.priority !== "risk" && priority !== state.priority) return false;
-      if (state.priority === "risk" && !isRiskItem(item)) return false;
-      if (state.newsType !== "all" && (item.newsType || "normal") !== state.newsType) return false;
-      if (state.sector !== "all" && !sectors.includes(state.sector)) return false;
-      if (state.marketSentiment !== "all" && (item.marketSentiment || "neutral") !== state.marketSentiment) return false;
-      if (state.impactHorizon !== "all" && (item.impactHorizon || "unknown") !== state.impactHorizon) return false;
-      if (state.signalStrength !== "all" && (item.signalStrength || "weak") !== state.signalStrength) return false;
-      if (state.brokerDecision !== "all" && (item.brokerDecision || "check_later") !== state.brokerDecision) return false;
-      if (state.source !== "all" && source !== state.source) return false;
-      if (!itemMatchesTicker(item, state.ticker)) return false;
-      if (!itemMatchesLetter(item)) return false;
-      if (!itemMatchesSummaryFilter(item)) return false;
-      return true;
-    }
-
-    function tabCountClass(count) {
-      if (count >= 10) return "high";
-      if (count >= 4) return "medium";
-      return "low";
-    }
-
-    function getTabCounts() {
-      const baseItems = state.items.filter(itemMatchesNonTabFilters);
-      const counts = new Map();
-      INTEL_TABS.forEach((tab) => {
-        counts.set(tab.id, baseItems.filter((item) => tabMatchesItem(item, tab)).length);
-      });
-      return counts;
-    }
-
-    function renderTabs() {
-      tabsEl.classList.toggle("is-collapsed", !state.tabsExpanded);
-      const counts = getTabCounts();
-      const groups = state.tabsExpanded ? INTEL_TAB_GROUPS : INTEL_TAB_GROUPS.filter((group) => group.primary);
-      tabsEl.innerHTML = groups.map((group) => `
-        <div class="intel-tab-group ${group.primary ? "" : "is-secondary"}">
-          <div class="intel-tab-heading">${escapeHtml(group.label)}</div>
-          ${group.tabs.map((tab) => {
-            const count = counts.get(tab.id) || 0;
-            const countBadge = count > 0
-              ? `<span class="chip-count ${tabCountClass(count)}">${escapeHtml(count)}</span>`
-              : "";
-            return `
-              <button class="intel-tab ${tab.id === state.view ? "active" : ""}" data-view="${escapeHtml(tab.id)}" title="${escapeHtml(tab.label)}">
-                <span>${escapeHtml(tab.label)}</span>${countBadge}
-              </button>
-            `;
-          }).join("")}
-        </div>
-      `).join("");
-      tabsToggleEl.textContent = state.tabsExpanded ? "Thu gọn" : "Mở rộng";
-    }
-
-    function renderLetterFilter() {
-      letterFilterEl.innerHTML = LETTER_FILTERS.map((letter) => `
-        <button class="${letter === state.tickerLetter ? "active" : ""}" data-letter="${escapeHtml(letter)}">
-          ${escapeHtml(letter === "all" ? "Tất cả" : letter)}
-        </button>
-      `).join("");
-    }
-
-    function isRiskItem(item) {
-      return item.newsType === "risk_event" || item.riskLevel === "high" || item.advisoryAction === "risk_warning" || item.advisoryAction === "alert_client";
-    }
-
-    function itemMatchesTicker(item, query) {
-      if (!query) return true;
-      const target = normalizedText(query);
-      return normalizedText(`${itemTickers(item).join(" ")} ${item.title || ""} ${item.summary || ""} ${item.source || ""}`).includes(target);
-    }
-
-    function isNoiseItem(item) {
-      return item.isNoise === true || item.status === "hidden" || item.status === "archived";
-    }
-
-    function hasTickerSignal(item) {
-      return itemTickers(item).length > 0
-        || (Array.isArray(item.relatedStocks) && item.relatedStocks.length > 0);
-    }
-
-    function itemMatchesSummaryFilter(item) {
-      return itemMatchesSummaryFilterWithId(item, state.summaryFilter);
-    }
-
-    function itemMatchesSummaryFilterWithId(item, filterId) {
-      const fields = getIntelFields(item);
-      const score = scoreValue(item);
-      if (filterId === "all" || filterId === "visible") return true;
-      if (filterId === "hot") return fields.impactLevel === "hot" || score >= 70 || priorityOf(item) === "hot";
-      if (filterId === "urgent") return item.brokerDecision === "urgent_alert" || isRiskItem(item) || item.riskLevel === "high";
-      if (filterId === "market") return item.newsType === "market_movement";
-      if (filterId === "macro") return item.newsType === "macro" || fields.sector === "macro";
-      if (filterId === "strong") return item.signalStrength === "strong" || item.newsType === "strong_signal";
-      if (filterId === "hidden") return isNoiseItem(item);
-      if (filterId === "ticker") return hasTickerSignal(item);
-      return true;
-    }
-
-    function itemMatchesLetter(item) {
-      if (state.tickerLetter === "all") return true;
-      return itemTickers(item).some((ticker) => ticker.startsWith(state.tickerLetter));
-    }
-
-    function renderOptions(selectEl, values, allLabel, selected) {
-      const current = selected || "all";
-      const optionValues = current !== "all" && !values.includes(current)
-        ? [current, ...values]
-        : values;
-      selectEl.innerHTML = `<option value="all">${escapeHtml(allLabel)}</option>` +
-        optionValues.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
-      selectEl.value = current;
-    }
-
-    function refreshFilterOptions() {
-      if (!["default", "newest", "oldest"].includes(timeFilterEl.value)) {
-        timeFilterEl.value = state.timeSort;
       }
-      state.timeSort = ["newest", "oldest"].includes(timeFilterEl.value) ? timeFilterEl.value : "default";
-      if (!["default", "score_desc", "score_asc"].includes(scoreFilterEl.value)) {
-        scoreFilterEl.value = state.scoreSort;
-      }
-      state.scoreSort = ["score_desc", "score_asc"].includes(scoreFilterEl.value) ? scoreFilterEl.value : "default";
-
-      renderOptions(newsTypeFilterEl, uniq(state.items.map((item) => item.newsType || "normal")), "Tất cả loại tin", state.newsType);
-      renderOptions(sectorFilterEl, uniq(state.items.flatMap((item) => Array.isArray(item.sectors) ? item.sectors : [])), "Tất cả ngành", state.sector);
-      renderOptions(marketSentimentFilterEl, uniq(state.items.map((item) => item.marketSentiment || "neutral")), "Tất cả trạng thái", state.marketSentiment);
-      renderOptions(impactHorizonFilterEl, uniq(state.items.map((item) => item.impactHorizon || "unknown")), "Tất cả thời hạn", state.impactHorizon);
-      renderOptions(signalStrengthFilterEl, uniq(state.items.map((item) => item.signalStrength || "weak")), "Tất cả tín hiệu", state.signalStrength);
-      renderOptions(brokerDecisionFilterEl, uniq(state.items.map((item) => item.brokerDecision || "check_later")), "Tất cả quyết định", state.brokerDecision);
-      renderOptions(sourceFilterEl, uniq(state.items.map((item) => item.source || "Unknown")), "Tất cả nguồn", state.source);
-
-      state.newsType = newsTypeFilterEl.value;
-      state.sector = sectorFilterEl.value;
-      state.marketSentiment = marketSentimentFilterEl.value;
-      state.impactHorizon = impactHorizonFilterEl.value;
-      state.signalStrength = signalStrengthFilterEl.value;
-      state.brokerDecision = brokerDecisionFilterEl.value;
-      state.source = sourceFilterEl.value;
+      return phrases.some((phrase) => target.includes(phrase));
     }
 
-    function getFilteredItems() {
-      return state.items.filter((item) => {
-        if (!itemMatchesNonTabFilters(item)) return false;
-        if (!tabMatches(item)) return false;
+    function applyAdminOverrides(item) {
+      const matched = state.adminOverrides.find((rule) => adminOverrideMatches(rule, item));
+      if (!matched) return item;
+      const autoTickers = autoTickerFromRule(matched, item);
+      const primaryTickers = unique([
+        ...autoTickers,
+        ...(Array.isArray(matched.primaryTickers) ? matched.primaryTickers : []),
+        matched.primaryTicker,
+      ]).map((code) => String(code).toUpperCase()).filter(Boolean);
+      const relatedStocks = unique([
+        ...autoTickers,
+        ...(Array.isArray(matched.relatedStocks) ? matched.relatedStocks : []),
+        ...(Array.isArray(matched.watchlistStocks) ? matched.watchlistStocks : []),
+      ]).map((code) => String(code).toUpperCase()).filter(Boolean);
+      return {
+        ...item,
+        finalSector: matched.finalSector || matched.sector || item.finalSector,
+        sector: matched.finalSector || matched.sector || item.sector,
+        primaryTicker: primaryTickers[0] || item.primaryTicker,
+        primaryTickers: primaryTickers.length ? primaryTickers : item.primaryTickers,
+        relatedStocks: relatedStocks.length ? relatedStocks : item.relatedStocks,
+        eventType: matched.eventType || item.eventType,
+        sentiment: matched.sentiment || item.sentiment,
+        impactLevel: matched.impactLevel || item.impactLevel,
+        adminOverrideApplied: true,
+      };
+    }
+
+    function normalizeItem(doc) {
+      const item = applyAdminOverrides({...doc});
+      item.id = String(item.id || item.docId || item.uniqueKey || itemUrl(item) || displayTitle(item));
+      item.source = item.source || item.sourceName || item.originalSource || "Unknown";
+      item.publishedAt = item.publishedAt || item.createdAt || null;
+      return item;
+    }
+
+    function dedupeDisplayItems(items) {
+      const seenTitles = new Set();
+      const seenUrls = new Set();
+      const ordered = [...items].sort((a, b) => timeMs(b.publishedAt || b.createdAt) - timeMs(a.publishedAt || a.createdAt));
+      return ordered.filter((item) => {
+        const titleKey = duplicateTitleKey(item);
+        const urlKey = normalizeUrl(itemUrl(item));
+        if (titleKey && seenTitles.has(titleKey)) return false;
+        if (urlKey && seenUrls.has(urlKey)) return false;
+        if (titleKey) seenTitles.add(titleKey);
+        if (urlKey) seenUrls.add(urlKey);
         return true;
-      }).sort((left, right) => {
-        return compareItems(left, right);
       });
     }
 
-    function itemTimeMs(item) {
-      return itemTime(item)?.getTime() || 0;
+    function isFxItem(item) {
+      const sourceText = normalizeText([item.source, item.sourceName, item.sourceId, item.originalSource].filter(Boolean).join(" "));
+      const sectorText = normalizeText(itemSector(item));
+      const titleText = titleSearchText(item);
+      if (/coindesk|cryptoslate|cryptonews|cointelegraph|bitcoin news|bitcoin_news/.test(sourceText)) return true;
+      if (/\b(fx|crypto)\b/.test(sectorText)) return true;
+      return /\b(bitcoin|btc|ethereum|eth|xrp|stablecoin|usdt|usdc|binance|coinbase|crypto|tien ma hoa|tien ao|vang|gia vang|gold|xau)\b/.test(titleText);
     }
 
-    function compareByTime(left, right) {
-      const leftTime = itemTimeMs(left);
-      const rightTime = itemTimeMs(right);
-      const timeDiff = state.timeSort === "oldest"
-        ? leftTime - rightTime
-        : rightTime - leftTime;
-      return timeDiff;
+    function isStockItem(item) {
+      const text = searchableText(item);
+      return itemTickers(item).length > 0 || /hose|hnx|upcom|co phieu|chung khoan|niem yet|giao dich/.test(text);
     }
 
-    function compareByScore(left, right) {
-      if (state.scoreSort === "score_asc") return scoreValue(left) - scoreValue(right);
-      if (state.scoreSort === "score_desc") return scoreValue(right) - scoreValue(left);
-      return 0;
+    function matchesChannel(item) {
+      if (state.channel === "all") return true;
+      if (state.channel === "fx") return isFxItem(item);
+      if (state.channel === "stocks") return isStockItem(item);
+      return !isFxItem(item);
+    }
+
+    function matchesFilters(item) {
+      if (item.status === "hidden" || item.status === "archived") return false;
+      if (!matchesChannel(item)) return false;
+      if (state.sector !== "all" && itemSector(item) !== state.sector) return false;
+      if (state.source !== "all" && itemSource(item) !== state.source) return false;
+      if (state.query && !searchableText(item).includes(normalizeText(state.query))) return false;
+      return true;
     }
 
     function compareItems(left, right) {
-      const scoreDiff = compareByScore(left, right);
-      if (scoreDiff !== 0) return scoreDiff;
-      if (state.timeSort !== "default") {
-        const timeDiff = compareByTime(left, right);
-        if (timeDiff !== 0) return timeDiff;
-      }
-      const defaultScoreDiff = scoreValue(right) - scoreValue(left);
-      if (defaultScoreDiff !== 0) return defaultScoreDiff;
-      const rankDiff = rankScore(right) - rankScore(left);
-      if (rankDiff !== 0) return rankDiff;
-      return itemTimeMs(right) - itemTimeMs(left);
+      const diff = timeMs(right.publishedAt || right.createdAt) - timeMs(left.publishedAt || left.createdAt);
+      return state.sort === "oldest" ? -diff : diff;
     }
 
-    function renderSummary() {
-      const noiseHidden = state.items.filter((item) => isNoiseItem(item)).length;
-      const tickers = uniq(state.items.flatMap((item) => itemTickers(item)));
-      const cards = [
-        ["all", "📦", "Tổng tải", state.items.length, "info"],
-        ["visible", "👁", "Hiển thị", state.filtered.length, "info"],
-        ["hot", "🔥", "Tin nóng", state.items.filter((item) => itemMatchesSummaryFilterWithId(item, "hot")).length, "hot"],
-        ["urgent", "🚨", "Cảnh báo khẩn", state.items.filter((item) => itemMatchesSummaryFilterWithId(item, "urgent")).length, "risk"],
-        ["market", "📈", "Vận động thị trường", state.items.filter((item) => item.newsType === "market_movement").length, "good"],
-        ["macro", "🌍", "Vĩ mô", state.items.filter((item) => itemMatchesSummaryFilterWithId(item, "macro")).length, "info"],
-        ["strong", "⚡", "Tín hiệu mạnh", state.items.filter((item) => itemMatchesSummaryFilterWithId(item, "strong")).length, "hot"],
-        ["hidden", "🗂", "Đã ẩn", noiseHidden, "info"],
-        ["ticker", "🏷", "Mã liên quan", tickers.length, "good"],
-      ];
-
-      summaryEl.innerHTML = cards.map(([id, icon, label, value, type]) => `
-        <button class="summary-pill ${escapeHtml(type)} ${id === state.summaryFilter ? "active" : ""}" type="button" data-summary-filter="${escapeHtml(id)}">
-          <span>${escapeHtml(icon)}</span>
-          <span>${escapeHtml(label)}:</span>
-          <strong>${escapeHtml(value)}</strong>
-        </button>
-      `).join("");
+    function renderOptions(select, values, allLabel, selected) {
+      select.innerHTML = [`<option value="all">${escapeHtml(allLabel)}</option>`]
+        .concat(values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
+        .join("");
+      select.value = selected;
     }
 
-    function tabLabel(id) {
-      return INTEL_TABS.find((tab) => tab.id === id)?.label || id;
+    function refreshFilterOptions() {
+      const channelItems = state.items.filter(matchesChannel);
+      renderOptions(els.sector, unique(channelItems.map(itemSector)).sort((a, b) => a.localeCompare(b)), "Tất cả nhóm", state.sector);
+      renderOptions(els.source, unique(channelItems.map(itemSource)).sort((a, b) => a.localeCompare(b)), "Tất cả nguồn", state.source);
     }
 
-    function summaryFilterLabel(id) {
-      const labels = {
-        hot: "Tin nóng",
-        urgent: "Cảnh báo khẩn",
-        market: "Vận động thị trường",
-        macro: "Vĩ mô",
-        strong: "Tín hiệu mạnh",
-        hidden: "Đã ẩn",
-        ticker: "Mã liên quan",
-      };
-      return labels[id] || id;
+    function filteredItems() {
+      return state.items.filter(matchesFilters).sort(compareItems);
     }
 
-    function timeSortLabel(value) {
-      if (value === "newest") return "Mới nhất";
-      if (value === "oldest") return "Cũ nhất";
-      return "";
+    function matchesSourceBoardFilters(item) {
+      if (item.status === "hidden" || item.status === "archived") return false;
+      if (state.sector !== "all" && itemSector(item) !== state.sector) return false;
+      if (state.source !== "all" && itemSource(item) !== state.source) return false;
+      if (state.query && !searchableText(item).includes(normalizeText(state.query))) return false;
+      return true;
     }
 
-    function scoreSortLabel(value) {
-      if (value === "score_desc") return "Điểm cao → thấp";
-      if (value === "score_asc") return "Điểm thấp → cao";
-      return "";
+    function sourceBoardItems() {
+      return state.items.filter(matchesSourceBoardFilters).sort(compareItems);
     }
 
-    function activeFilters() {
-      const filters = [];
-      if (state.ticker) filters.push({key: "search", label: `Tìm: ${state.ticker}`});
-      if (state.tickerLetter !== "all") filters.push({key: "letter", label: `Mã ${state.tickerLetter}`});
-      if (state.view !== "all") filters.push({key: "view", label: tabLabel(state.view)});
-      if (state.summaryFilter !== "all") filters.push({key: "summary", label: summaryFilterLabel(state.summaryFilter)});
-      if (state.timeSort !== "default") filters.push({key: "timeSort", label: timeSortLabel(state.timeSort)});
-      if (state.scoreSort !== "default") filters.push({key: "scoreSort", label: scoreSortLabel(state.scoreSort)});
-      if (state.sourceScope === "trusted") filters.push({key: "sourceScope", label: "Chỉ nguồn uy tín"});
-      if (state.showNoise) filters.push({key: "showNoise", label: "Hiện tin nhiễu"});
-      [
-        ["newsType", "Loại"],
-        ["sector", "Ngành"],
-        ["marketSentiment", "Trạng thái"],
-        ["impactHorizon", "Thời hạn"],
-        ["signalStrength", "Tín hiệu"],
-        ["brokerDecision", "Quyết định"],
-        ["source", "Nguồn"],
-      ].forEach(([key, label]) => {
-        if (state[key] !== "all") filters.push({key, label: `${label}: ${state[key]}`});
-      });
-      return filters.filter((filter) => filter.label);
-    }
-
-    function renderActiveFilters() {
-      const filters = activeFilters();
-      clearSearchEl.hidden = !state.ticker;
-      if (!filters.length) {
-        activeFilterBarEl.hidden = true;
-        activeFilterBarEl.innerHTML = "";
-        return;
-      }
-      activeFilterBarEl.hidden = false;
-      activeFilterBarEl.innerHTML = `
-        <span class="active-filter-label">Đang lọc:</span>
-        ${filters.map((filter) => `
-          <span class="active-filter-chip">
-            ${escapeHtml(filter.label)}
-            <button type="button" data-clear-filter="${escapeHtml(filter.key)}" aria-label="Bỏ ${escapeHtml(filter.label)}">×</button>
-          </span>
-        `).join("")}
-        <button id="active-reset-filters" class="active-filter-reset" type="button">Xóa bộ lọc</button>
-      `;
-    }
-
-    function syncFilterControls() {
-      tickerSearchEl.value = state.ticker;
-      clearSearchEl.hidden = !state.ticker;
-      timeFilterEl.value = state.timeSort;
-      scoreFilterEl.value = state.scoreSort;
-      sourceScopeFilterEl.value = state.sourceScope;
-      showNoiseToggleEl.checked = state.showNoise;
-      newsTypeFilterEl.value = state.newsType;
-      sectorFilterEl.value = state.sector;
-      marketSentimentFilterEl.value = state.marketSentiment;
-      impactHorizonFilterEl.value = state.impactHorizon;
-      signalStrengthFilterEl.value = state.signalStrength;
-      brokerDecisionFilterEl.value = state.brokerDecision;
-      sourceFilterEl.value = state.source;
-      renderLetterFilter();
-    }
-
-    function clearFilter(key) {
-      if (key === "search") state.ticker = "";
-      else if (key === "letter") state.tickerLetter = "all";
-      else if (key === "view") state.view = "all";
-      else if (key === "summary") state.summaryFilter = "all";
-      else if (key === "timeSort") state.timeSort = "default";
-      else if (key === "scoreSort") state.scoreSort = "default";
-      else if (key === "sourceScope") state.sourceScope = "extended";
-      else if (key === "showNoise") state.showNoise = false;
-      else if (key in state) state[key] = "all";
-      syncFilterControls();
-      applyFilterChange();
-    }
-
-    function resetFilters() {
-      state.ticker = "";
-      state.tickerLetter = "all";
-      state.view = "all";
-      state.summaryFilter = "all";
-      state.timeSort = "default";
-      state.scoreSort = "default";
-      state.sourceScope = "trusted";
-      state.showNoise = false;
-      state.priority = "all";
-      state.newsType = "all";
-      state.sector = "all";
-      state.marketSentiment = "all";
-      state.impactHorizon = "all";
-      state.signalStrength = "all";
-      state.brokerDecision = "all";
-      state.source = "all";
-      syncFilterControls();
-      renderTabs();
-      applyFilterChange();
-    }
-
-    function freshnessWeight(item) {
-      const date = itemTime(item);
-      if (!date) return 0.4;
-      const ageMinutes = Math.max(0, (Date.now() - date.getTime()) / 60000);
-      if (ageMinutes <= 15) return 1.5;
-      if (ageMinutes <= 60) return 1.25;
-      if (ageMinutes <= 180) return 1;
-      if (ageMinutes <= 360) return 0.75;
-      if (ageMinutes <= 1440) return 0.5;
-      return 0.25;
-    }
-
-    function badge(value, extraClass = "") {
-      if (!value) return "";
-      return `<span class="badge ${escapeHtml(extraClass)}">${escapeHtml(value)}</span>`;
-    }
-
-    function renderDashboard(groups) {
-      if (state.view !== "all") {
-        dashboardEl.innerHTML = "";
-        return;
-      }
-
-      const now = new Date();
-      const isToday = (value) => {
-        const date = toDate(value);
-        return date
-          && date.getFullYear() === now.getFullYear()
-          && date.getMonth() === now.getMonth()
-          && date.getDate() === now.getDate();
-      };
-
-      const todayGroups = groups.filter((group) => isToday(group.primary.publishedAt));
-      const sectorMap = new Map();
-      todayGroups.forEach((group) => {
-        const fields = getIntelFields(group.primary);
-        const current = sectorMap.get(fields.sector) || {sector: fields.sector, count: 0, hot: 0, watch: 0, score: 0};
-        current.count += group.items.length;
-        current.hot += fields.impactLevel === "hot" ? 1 : 0;
-        current.watch += fields.impactLevel === "watch" ? 1 : 0;
-        current.score += scoreValue(group.primary) * freshnessWeight(group.primary);
-        sectorMap.set(fields.sector, current);
-      });
-
-      const heatCells = Array.from(sectorMap.values())
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 5)
-        .map((item, index) => {
-        const heatClass = item.hot ? "hot" : item.watch ? "watch" : "good";
-        return `
-          <div class="heat-cell ${heatClass}">
-            <div class="heat-label">${escapeHtml(index + 1)}. ${escapeHtml(SECTOR_LABELS[item.sector] || item.sector)}</div>
-            <div class="heat-meta">${escapeHtml(item.count)} tin · heat ${escapeHtml(Math.round(item.score))} · hot ${escapeHtml(item.hot)}</div>
-          </div>
-        `;
-      }).join("") || `<div class="empty">Chưa có ngành nóng trong ngày.</div>`;
-
-      const tickerMap = new Map();
-      todayGroups.forEach((group) => {
-        const tickers = Array.isArray(group.primary.tickers) ? group.primary.tickers : [];
-        tickers.forEach((ticker) => {
-          const key = String(ticker).toUpperCase();
-          const current = tickerMap.get(key) || {ticker: key, count: 0, score: 0, title: ""};
-          current.count += group.items.length;
-          current.score += group.rank;
-          current.title ||= splitTitleTicker(group.primary).title;
-          tickerMap.set(key, current);
-        });
-      });
-
-      const tickerCells = Array.from(tickerMap.values())
-        .sort((a, b) => b.count - a.count || b.score - a.score)
-        .slice(0, 10)
-        .map((item) => `
-          <div class="ticker-cell">
-            <strong>${escapeHtml(item.ticker)}</strong><span>${escapeHtml(item.count)} tin</span>
-            <div>${escapeHtml(item.title)}</div>
-          </div>
-        `).join("") || `<div class="empty">Chưa có ticker nổi bật.</div>`;
-
-      const liveRows = groups.slice(0, 12).map((group) => {
-        const {ticker, title} = splitTitleTicker(group.primary);
-        const sourceUrl = safeArticleUrl(group.primary);
-        return `
-          <div class="live-row" ${sourceUrl ? `data-source-url="${escapeHtml(sourceUrl)}"` : ""}>
-            <strong>${escapeHtml(ticker || "NEWS")}</strong>
-            <span>${escapeHtml(title)}</span>
-            <em>${escapeHtml(relativeTime(group.primary.publishedAt))}</em>
-          </div>
-        `;
+    function renderTabs() {
+      els.channelTabs.innerHTML = CHANNELS.map((tab) => {
+        return `<button type="button" class="${state.channel === tab.id ? "active" : ""}" data-channel="${escapeHtml(tab.id)}">${escapeHtml(tab.label)}</button>`;
       }).join("");
-
-      dashboardEl.innerHTML = `
-        <section class="intel-panel">
-          <h2>🔥 Ngành nóng hôm nay</h2>
-          <div class="heatmap-grid">${heatCells}</div>
-        </section>
-        <section class="intel-panel">
-          <h2>Mã được nhắc nhiều</h2>
-          <div class="ticker-grid">${tickerCells}</div>
-        </section>
-        <section class="intel-panel">
-          <h2>Live ticker realtime</h2>
-          <div class="live-ticker">${liveRows}</div>
-        </section>
-      `;
     }
 
-    function renderGroupCard(group) {
-      const item = group.primary;
-      const finalScore = scoreValue(item);
-      const {ticker, title} = splitTitleTicker(item);
-      const displayTitle = item.clusterTitle && group.items.length > 1 ? item.clusterTitle : title;
-      const sourceTime = `${shortSource(item.source)} - ${relativeTime(item.publishedAt) || formatTime(item.publishedAt)}`;
-      const duplicateLabel = (group.duplicateCount || group.items.length) > 1 ? `<span class="dup-badge">${escapeHtml(group.sources.size)} nguồn · ${escapeHtml(group.duplicateCount || group.items.length)} tin</span>` : "";
-      const sourceUrl = safeArticleUrl(item);
-      const summary = legalSummary(item.summary);
-      const summaryHtml = summary || sourceUrl
-        ? `<div class="summary">${escapeHtml(summary)}${summary && sourceUrl ? " " : ""}${sourceUrl ? `<a class="source-action" data-source-link href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer">Đọc tại nguồn</a>` : ""}</div>`
-        : "";
-      const titleLink = sourceUrl
-        ? `<a class="title" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" data-source-link>
-            <span class="title-main">${escapeHtml(displayTitle)}</span>
-            ${duplicateLabel}
-            <span class="title-source-time"> - ${escapeHtml(sourceTime)}</span>
-          </a>`
-        : `<span class="title" title="Tin này chưa có link nguồn hợp lệ">
-            <span class="title-main">${escapeHtml(displayTitle)}</span>
-            ${duplicateLabel}
-            <span class="title-source-time"> - ${escapeHtml(sourceTime)}</span>
-          </span>`;
+    function renderSummary(items) {
+      els.summary.hidden = true;
+      els.summary.innerHTML = "";
+    }
 
+    function sectorPillClass(item) {
+      return isFxItem(item) ? "pill fx" : /hot|high|urgent/i.test(String(item.impactLevel || item.priorityLabel || "")) ? "pill hot" : "pill";
+    }
+
+    function tickerText(item) {
+      const tickers = itemTickers(item);
+      return tickers.length ? tickers.join(", ") : "";
+    }
+
+    function shortTickerText(item) {
+      const text = tickerText(item);
+      return text.length > 3 ? text.slice(0, 3) : text;
+    }
+
+    function titleLine(item, sourceOverride) {
+      const title = displayTitle(item);
+      const source = arguments.length > 1 ? sourceOverride : itemSource(item);
+      return source ? `${title} ${source}` : title;
+    }
+
+    function titleLineHtml(item, sourceOverride) {
+      const title = displayTitle(item);
+      const source = arguments.length > 1 ? sourceOverride : itemSource(item);
+      return `<span class="news-title-text">${escapeHtml(title)}</span>${source ? `<span class="news-source-inline">${escapeHtml(source)}</span>` : ""}`;
+    }
+
+    function newsRowHtml(item) {
+      const url = itemUrl(item);
+      const readClass = state.readLinks.has(normalizeUrl(url)) ? " read" : "";
+      const titleWithSource = titleLine(item);
+      const tooltip = [item.titleOriginal || item.originalTitle, displaySummary(item)].filter(Boolean).join("\n");
+      const titleHtml = url
+        ? `<a class="news-title${readClass}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" data-read-url="${escapeHtml(url)}" title="${escapeHtml(tooltip || titleWithSource)}">${titleLineHtml(item)}</a>`
+        : `<span class="news-title" title="${escapeHtml(tooltip || titleWithSource)}">${titleLineHtml(item)}</span>`;
       return `
-        <article class="news-item" data-group-key="${escapeHtml(group.key)}" tabindex="0">
+        <article class="news-row">
+          <div class="news-side">
+            <time class="news-time">${escapeHtml(formatTime(item.publishedAt || item.createdAt))}</time>
+          </div>
           <div class="news-main">
-            <div class="title-row">
-              ${ticker ? `<span class="ticker-badge">${escapeHtml(ticker)}</span>` : ""}
-              ${item.eventType === "analyst_report" || item.uiBadge ? `<span class="report-badge">${escapeHtml(item.uiBadge || "📄 Báo cáo")}</span>` : ""}
-              ${titleLink}
-            </div>
-            ${summaryHtml}
-            <div class="score-stack">
-              <div class="score-badge ${escapeHtml(scoreClass(finalScore))}">${escapeHtml(finalScore)} điểm</div>
-              <button class="detail-action" type="button" data-open-detail="${escapeHtml(group.key)}">Phân tích</button>
-            </div>
+            ${titleHtml}
+          </div>
+          <div class="news-code-cell" title="${escapeHtml(tickerText(item))}">${escapeHtml(shortTickerText(item))}</div>
+          <div class="news-meta">
+            <span class="${sectorPillClass(item)}">${escapeHtml(itemSector(item))}</span>
+            ${telegramActionHtml(item)}
           </div>
         </article>
       `;
     }
 
-    function renderTimeline() {
-      const rows = state.filtered
-        .slice()
-        .sort(compareItems)
-        .slice(0, 100)
-        .map((item) => {
-          const date = itemTime(item);
-          const {ticker, title} = splitTitleTicker(item);
-          const url = safeArticleUrl(item);
-          const time = date ? date.toLocaleTimeString("vi-VN", {hour: "2-digit", minute: "2-digit"}) : "--:--";
+    function renderNews(items) {
+      const visible = items.slice(0, state.renderLimit);
+      els.list.className = "news-list";
+      els.list.innerHTML = visible.length
+        ? visible.map(newsRowHtml).join("")
+        : `<div class="empty">Không có tin phù hợp bộ lọc hiện tại.</div>`;
+      els.loadMore.hidden = state.view !== "news" || items.length <= state.renderLimit;
+      els.loadMore.textContent = `Tải thêm (${Math.min(RENDER_STEP, Math.max(0, items.length - state.renderLimit))})`;
+    }
+
+    function renderSourceBoard(items) {
+      const groups = new Map();
+      items.forEach((item) => {
+        const source = itemSource(item);
+        if (!groups.has(source)) groups.set(source, []);
+        groups.get(source).push(item);
+      });
+      const sourceGroups = Array.from(groups.entries())
+        .map(([source, rows]) => ({source, rows: rows.sort(compareItems)}))
+        .sort((a, b) => b.rows.length - a.rows.length || a.source.localeCompare(b.source));
+      els.loadMore.hidden = true;
+      els.list.className = "source-board";
+      els.list.innerHTML = sourceGroups.length
+        ? sourceGroups.map((group) => {
+          const expanded = state.expandedSources.has(group.source);
+          const visibleRows = expanded ? group.rows : group.rows.slice(0, SOURCE_PREVIEW_LIMIT);
           return `
-            <div class="timeline-row">
-              <time>${escapeHtml(time)}</time>
-              ${url ? `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(ticker ? `${ticker}: ${title}` : title)}</a>` : `<span>${escapeHtml(ticker ? `${ticker}: ${title}` : title)}</span>`}
-              <span>${escapeHtml(scoreValue(item))}</span>
+          <section class="source-column">
+            <div class="source-head">
+              <h2>${escapeHtml(group.source)}</h2>
+              <span class="source-count">${escapeHtml(String(group.rows.length))} tin</span>
             </div>
-          `;
-        }).join("");
-      listEl.innerHTML = rows || `<div class="empty">Không có tin phù hợp timeline.</div>`;
+            <div class="source-list">${visibleRows.map((item) => `
+              <div class="source-item">
+                <div class="news-side">
+                  <time class="news-time">${escapeHtml(formatTime(item.publishedAt || item.createdAt))}</time>
+                </div>
+                  <div class="news-main">
+                    ${itemUrl(item)
+                    ? `<a class="news-title${state.readLinks.has(normalizeUrl(itemUrl(item))) ? " read" : ""}" href="${escapeHtml(itemUrl(item))}" target="_blank" rel="noopener noreferrer" data-read-url="${escapeHtml(itemUrl(item))}" title="${escapeHtml(titleLine(item, ""))}">${titleLineHtml(item, "")}</a>`
+                    : `<span class="news-title" title="${escapeHtml(titleLine(item, ""))}">${titleLineHtml(item, "")}</span>`}
+                </div>
+                <div class="news-code-cell" title="${escapeHtml(tickerText(item))}">${escapeHtml(shortTickerText(item))}</div>
+                <div class="news-meta">${telegramActionHtml(item)}</div>
+              </div>
+            `).join("")}</div>
+            ${group.rows.length > SOURCE_PREVIEW_LIMIT
+              ? `<button class="source-more" type="button" data-source-toggle="${escapeHtml(group.source)}">${expanded ? "Thu gọn" : `Xem thêm ${group.rows.length - SOURCE_PREVIEW_LIMIT} tin`}</button>`
+              : ""}
+          </section>
+        `}).join("")
+        : `<div class="empty">Không có tin phù hợp bộ lọc hiện tại.</div>`
     }
 
-    function detailMetric(label, value) {
-      return `
-        <div class="metric">
-          <div class="metric-label">${escapeHtml(label)}</div>
-          <div class="metric-value">${escapeHtml(value || "-")}</div>
-        </div>
-      `;
-    }
-
-    function openDetail(groupKey) {
-      const group = state.groups.find((item) => item.key === groupKey);
-      if (!group) return;
-
-      const item = group.primary;
-      const intel = getIntelFields(item);
-      const {ticker, title} = splitTitleTicker(item);
-      const tickers = itemTickers(item).join(", ");
-      const sectors = Array.isArray(item.sectors) ? item.sectors.join(", ") : "";
-      const keywords = Array.isArray(item.keywords) ? item.keywords.join(", ") : "";
-      const sources = Array.from(group.urls.entries()).map(([url, source]) => `
-        <div><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source)}</a></div>
-      `).join("") || `<div class="empty">Không có link nguồn phù hợp.</div>`;
-
-      detailTitleEl.textContent = `${ticker ? `${ticker}: ` : ""}${title}`;
-      detailBodyEl.innerHTML = `
-        <div class="detail-grid">
-          ${detailMetric("Impact", item.impactScore)}
-          ${detailMetric("Score", item.finalScore)}
-          ${detailMetric("Confidence", item.confidenceScore)}
-          ${detailMetric("Nguồn", `${group.sources.size} nguồn / ${group.items.length} tin`)}
-          ${detailMetric("Analyzer", item.newsType)}
-          ${detailMetric("Sentiment", intel.sentiment)}
-          ${detailMetric("Horizon", item.impactHorizon)}
-          ${detailMetric("Decision", item.decision || item.brokerDecision)}
-        </div>
-        <div class="detail-grid">
-          ${detailMetric("Market scope", item.marketScope)}
-          ${detailMetric("Market weight", item.marketImpactWeight)}
-          ${detailMetric("Enterprise tier", item.enterpriseTier)}
-          ${detailMetric("Source tier", item.sourceTier)}
-          ${detailMetric("Source weight", item.sourceWeight)}
-          ${detailMetric("Quality score", item.newsQualityScore)}
-        </div>
-        <div class="metric">
-          <div class="metric-label">Tóm tắt bởi hệ thống (${escapeHtml(item.summaryGeneratedBy || "rss")})</div>
-          <div class="metric-value">${escapeHtml(legalSummary(item.summary) || "Không có tóm tắt.")}</div>
-        </div>
-        <div class="detail-grid">
-          ${detailMetric("Related stocks", tickers)}
-          ${detailMetric("Sector", SECTOR_LABELS[intel.sector] || intel.sector || sectors)}
-          ${detailMetric("Event type", intel.eventType)}
-          ${detailMetric("Impact level", intel.impactLevel)}
-          ${detailMetric("Recommendation", item.recommendation)}
-          ${detailMetric("Target price", item.targetPriceText)}
-        </div>
-        <div class="metric">
-          <div class="metric-label">Reason</div>
-          <div class="metric-value">${escapeHtml(item.reasonShort || "Chưa có lý do phân loại.")}</div>
-        </div>
-        <div class="detail-grid">
-          ${detailMetric("Sectors raw", sectors)}
-          ${detailMetric("Keywords", keywords)}
-          ${detailMetric("Cập nhật", formatTime(item.publishedAt))}
-          ${detailMetric("Category group", intel.categoryGroup)}
-        </div>
-        <div class="detail-grid">
-          ${detailMetric("Cluster", item.clusterTitle || item.clusterId)}
-          ${detailMetric("Duplicate count", group.duplicateCount || group.items.length)}
-          ${detailMetric("Noise reason", item.noiseReason)}
-          ${detailMetric("Cluster ID", item.clusterId)}
-        </div>
-        <div class="metric">
-          <div class="metric-label">Legal mode</div>
-          <div class="metric-value">${escapeHtml(item.legalMode === false ? "off" : "on")} · ${escapeHtml(item.contentType || "link_preview")}</div>
-        </div>
-        <section class="metric">
-          <div class="metric-label">Tất cả nguồn</div>
-          <div class="source-list">${sources}</div>
-        </section>
-      `;
-      detailBackdropEl.classList.add("visible");
-    }
-
-    function closeDetail() {
-      detailBackdropEl.classList.remove("visible");
-    }
-
-    function sortMasterNews() {
-      state.masterNewsStore.sort((left, right) => timestampMs(right.publishedAt || right.createdAt) - timestampMs(left.publishedAt || left.createdAt));
-      if (state.masterNewsStore.length > MAX_MASTER_NEWS) {
-        state.masterNewsStore = state.masterNewsStore.slice(0, MAX_MASTER_NEWS);
-      }
-      state.items = state.masterNewsStore;
-    }
-
-    function mergeIntoMasterStore(rawItems, {deferRender = false} = {}) {
-      const normalizedItems = rawItems.map(normalizeNewsItem).filter((item) => item.title);
-      const index = new Map();
-      state.masterNewsStore.forEach((item, itemIndex) => {
-        duplicateKeysFor(item).forEach((key) => index.set(key, itemIndex));
-      });
-
-      let added = 0;
-      normalizedItems.forEach((incoming) => {
-        const duplicateIndex = duplicateKeysFor(incoming)
-          .map((key) => index.get(key))
-          .find((value) => Number.isInteger(value));
-        if (Number.isInteger(duplicateIndex)) {
-          const existing = state.masterNewsStore[duplicateIndex];
-          const best = betterNewsItem(existing, incoming);
-          const other = best === existing ? incoming : existing;
-          const relatedSources = new Set([
-            ...(existing.relatedSources || []),
-            ...(incoming.relatedSources || []),
-            existing.source,
-            incoming.source,
-          ].filter(Boolean));
-          state.masterNewsStore[duplicateIndex] = {
-            ...existing,
-            ...best,
-            relatedSources: Array.from(relatedSources).filter((source) => source !== best.source),
-            duplicateCount: Math.max(Number(existing.duplicateCount || 1), Number(incoming.duplicateCount || 1), relatedSources.size),
-            newsQualityScore: qualityScoreFor(best, best === incoming ? 0 : 3),
-          };
-        } else {
-          state.masterNewsStore.push(incoming);
-          duplicateKeysFor(incoming).forEach((key) => index.set(key, state.masterNewsStore.length - 1));
-          added += 1;
-        }
-      });
-
-      sortMasterNews();
-      saveNewsCache();
-      if (added && deferRender) {
-        state.pendingNewItems = normalizedItems.slice(0, added);
-        showNewNewsNotice(added);
-      }
-      return added;
-    }
-
-    function applyFilterChange() {
-      state.renderLimit = RENDER_STEP;
+    function render() {
+      state.items = dedupeDisplayItems(state.rawItems.map(normalizeItem));
       refreshFilterOptions();
-      renderItems();
-    }
-
-    function latestMasterDate() {
-      return state.masterNewsStore.reduce((latest, item) => Math.max(latest, timestampMs(item.publishedAt || item.createdAt)), 0);
-    }
-
-    function isNearTop() {
-      return window.scrollY < 180;
-    }
-
-    function formatCacheTime(value) {
-      const date = value ? new Date(value) : null;
-      if (!date || Number.isNaN(date.getTime())) return "--:--";
-      return date.toLocaleTimeString("vi-VN", {hour: "2-digit", minute: "2-digit"});
-    }
-
-    function loadNewsCache() {
-      try {
-        const raw = localStorage.getItem(NEWS_CACHE_KEY);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        const items = Array.isArray(parsed.items) ? parsed.items : [];
-        state.cacheUpdatedAt = parsed.updatedAt || null;
-        state.masterNewsStore = items.map(normalizeNewsItem);
-        sortMasterNews();
-      } catch (error) {
-        console.warn("Cannot load news cache", error);
-      }
-    }
-
-    function saveNewsCache() {
-      try {
-        state.cacheUpdatedAt = Date.now();
-        const publicItems = state.masterNewsStore.slice(0, MAX_MASTER_NEWS).map((item) => ({
-          id: item.id,
-          title: item.title || "",
-          link: item.link || "",
-          originalUrl: item.originalUrl || "",
-          source: item.source || "Unknown",
-          sourceTier: item.sourceTier || sourceTierFor(item),
-          sourceWeight: item.sourceWeight || sourceWeightForTier(item.sourceTier),
-          category: item.category || item.group || "",
-          publishedAt: toCacheDate(item.publishedAt),
-          createdAt: toCacheDate(item.createdAt),
-          summary: item.summary || "",
-          image: item.image || "",
-          tickers: Array.isArray(item.tickers) ? item.tickers : [],
-          relatedStocks: Array.isArray(item.relatedStocks) ? item.relatedStocks : [],
-          keywords: Array.isArray(item.keywords) ? item.keywords : [],
-          titleHash: item.titleHash || hashText(item.title || ""),
-          contentHash: item.contentHash || hashText(`${item.title || ""} ${item.summary || ""}`),
-          newsQualityScore: item.newsQualityScore || qualityScoreFor(item),
-          relatedSources: Array.isArray(item.relatedSources) ? item.relatedSources : [],
-          newsType: item.newsType || "",
-          priorityLabel: item.priorityLabel || "",
-          finalScore: item.finalScore || 0,
-          impactScore: item.impactScore || 0,
-          confidenceScore: item.confidenceScore || 0,
-          marketSentiment: item.marketSentiment || "",
-          impactHorizon: item.impactHorizon || "",
-          signalStrength: item.signalStrength || "",
-          brokerDecision: item.brokerDecision || "",
-          sectors: Array.isArray(item.sectors) ? item.sectors : [],
-          eventType: item.eventType || "",
-          uiBadge: item.uiBadge || "",
-        }));
-        localStorage.setItem(NEWS_CACHE_KEY, JSON.stringify({updatedAt: state.cacheUpdatedAt, items: publicItems}));
-      } catch (error) {
-        console.warn("Cannot save news cache", error);
-      }
-    }
-
-    function showNewNewsNotice(count) {
-      if (!newNewsNoticeEl || !newNewsButtonEl) return;
-      state.pendingNewItems = state.pendingNewItems.slice(0, count);
-      newNewsButtonEl.textContent = `Có ${count} tin mới - bấm để cập nhật`;
-      newNewsNoticeEl.hidden = false;
-    }
-
-    function hideNewNewsNotice() {
-      if (!newNewsNoticeEl) return;
-      state.pendingNewItems = [];
-      newNewsNoticeEl.hidden = true;
-    }
-
-    function updateLoadMoreState() {
-      if (!loadMoreRowEl || !loadMoreButtonEl || !loadMoreStatusEl) return;
-      if (!state.firstPageReady) {
-        loadMoreRowEl.hidden = false;
-        loadMoreButtonEl.disabled = true;
-        loadMoreStatusEl.textContent = "Đang tải...";
-        return;
-      }
-
-      loadMoreRowEl.hidden = false;
-      const canRenderMore = state.filtered.length > state.renderLimit;
-      state.hasMore = canRenderMore;
-      loadMoreButtonEl.disabled = state.isLoadingMore || !canRenderMore;
-      loadMoreButtonEl.textContent = state.isLoadingMore ? "Đang tải..." : "Tải thêm";
-      loadMoreStatusEl.textContent = state.isLoadingMore
-        ? "Đang mở rộng"
-        : canRenderMore
-          ? ""
-          : "Đã hết tin";
-    }
-
-    function loadMoreItems() {
-      if (state.isLoadingMore || !state.firstPageReady) return;
-      if (state.filtered.length <= state.renderLimit) return;
-      state.isLoadingMore = true;
-      updateLoadMoreState();
-      window.setTimeout(() => {
-        state.renderLimit += RENDER_STEP;
-        renderItems();
-        state.isLoadingMore = false;
-        updateLoadMoreState();
-      }, 80);
-    }
-
-    function maybeLoadMoreOnScroll() {
-      if (state.isLoadingMore || !state.firstPageReady || state.filtered.length <= state.renderLimit) return;
-      const distanceToBottom = document.documentElement.scrollHeight - window.innerHeight - window.scrollY;
-      if (distanceToBottom < 520) loadMoreItems();
-    }
-
-    async function syncNewerItems({silent = false} = {}) {
-      if (!db || state.isSyncing) return;
-      const latest = latestMasterDate();
-      state.isSyncing = true;
-      try {
-        let query = db.collection("news").orderBy("publishedAt", "desc").limit(PAGE_SIZE);
-        if (latest) query = db.collection("news")
-          .where("publishedAt", ">", new Date(latest))
-          .orderBy("publishedAt", "desc")
-          .limit(PAGE_SIZE);
-        const snapshot = await query.get();
-        const items = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
-        const shouldRender = isNearTop() || !state.firstPageReady;
-        const added = mergeIntoMasterStore(items, {deferRender: !shouldRender && !silent});
-        state.lastAutoSyncAt = Date.now();
-        state.firstPageReady = true;
-        refreshFilterOptions();
-        if (shouldRender || !added || silent) {
-          if (shouldRender) hideNewNewsNotice();
-          renderItems();
-        }
-      } catch (error) {
-        statusEl.textContent = `Lỗi đồng bộ tin mới: ${error.message}`;
-      } finally {
-        state.isSyncing = false;
-      }
-    }
-
-    function renderItems() {
-      state.items = state.masterNewsStore;
-      state.filtered = getFilteredItems();
-      state.groups = groupItems(state.filtered);
-      const visibleCount = Math.min(state.renderLimit, state.filtered.length);
-      statusEl.textContent = `Tổng nguyên liệu đã tải: ${state.items.length} tin. Đang lọc: ${state.filtered.length} tin. Đang hiển thị: ${visibleCount}/${state.filtered.length} tin. Cache cập nhật lúc: ${formatCacheTime(state.cacheUpdatedAt)}.`;
       renderTabs();
-      renderSummary();
-      renderActiveFilters();
-      renderDashboard(state.groups);
-      updateLoadMoreState();
+      const items = filteredItems();
+      renderSummary(items);
+      els.status.textContent = `Đã tải ${state.items.length} tin. Đang lọc ${items.length} tin.`;
+      els.viewNews.classList.toggle("active", state.view === "news");
+      els.viewSource.classList.toggle("active", state.view === "source");
+      if (state.view === "source") renderSourceBoard(sourceBoardItems());
+      else renderNews(items);
+      els.clearSearch.hidden = !state.query;
+    }
 
-      timelineToggleButtonEl.classList.toggle("active", state.timelineMode);
-      if (state.timelineMode) {
-        renderTimeline();
+    async function loadAdminOverrides(options = {}) {
+      const snapshot = await db.collection("market_admin_overrides").where("active", "==", true).limit(500).get(options);
+      state.adminOverrides = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+    }
+
+    async function loadManualNews(options = {}) {
+      const snapshot = await db.collection("manual_news")
+        .where("status", "==", "published")
+        .orderBy("publishedAt", "desc")
+        .limit(100)
+        .get(options);
+      return snapshot.docs.map((doc) => ({id: doc.id, collectionName: "manual_news", isManual: true, ...doc.data()}));
+    }
+
+    async function loadNews(options = {}) {
+      if (!db) return;
+      els.status.textContent = "Đang tải dữ liệu...";
+      els.refresh.disabled = true;
+      try {
+        const [newsSnapshot, manualItems] = await Promise.all([
+          db.collection("news").orderBy("publishedAt", "desc").limit(PAGE_SIZE).get(options),
+          loadManualNews(options).catch(() => []),
+        ]);
+        state.rawItems = [
+          ...newsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})),
+          ...manualItems,
+        ];
+        state.renderLimit = RENDER_STEP;
+        render();
+      } catch (error) {
+        els.status.textContent = `Lỗi tải dữ liệu: ${error.message || error}`;
+      } finally {
+        els.refresh.disabled = false;
+      }
+    }
+
+    async function loadTelegramAdminData() {
+      if (!db || !state.isAdmin) return;
+      try {
+        const [groupsSnapshot, logsSnapshot, autoSetting] = await Promise.all([
+          db.collection("telegram_groups").orderBy("name").limit(100).get(),
+          Promise.resolve({docs: []}),
+          db.collection("telegram_settings").doc("auto_push").get(),
+        ]);
+        state.telegramGroups = groupsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()})).filter((group) => group.active !== false);
+        state.telegramLogs = logsSnapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+        state.telegramAutoPushEnabled = autoSetting.exists && autoSetting.data()?.enabled === true;
+        render();
+      } catch (error) {
+        els.status.textContent = `Không tải được Telegram admin data: ${error.message || error}`;
+      }
+    }
+
+    function autoPushItemPayload(item) {
+      return {
+        newsId: item.id,
+        title: displayTitle(item),
+        link: itemUrl(item),
+        summary: displaySummary(item),
+        source: item.source || item.sourceName || item.originalSource || itemSource(item),
+        sourceName: item.sourceName || item.source || itemSource(item),
+        sector: item.sector || item.finalSector || item.category,
+        finalSector: item.finalSector,
+        category: item.category,
+        categoryGroup: item.categoryGroup,
+        eventType: item.eventType || item.newsType,
+        newsType: item.newsType,
+        impactLevel: item.impactLevel || item.priorityLabel || item.priority,
+        priorityLabel: item.priorityLabel,
+        impactScore: item.impactScore || item.finalScore || item.score,
+        finalScore: item.finalScore,
+        relatedStocks: Array.isArray(item.relatedStocks) ? item.relatedStocks : [],
+        primaryTickers: Array.isArray(item.primaryTickers) ? item.primaryTickers : [],
+        tickers: Array.isArray(item.tickers) ? item.tickers : [],
+        watchlistStocks: Array.isArray(item.watchlistStocks) ? item.watchlistStocks : [],
+      };
+    }
+
+    function openTelegramModal(newsId) {
+      const item = state.items.find((row) => row.id === newsId);
+      if (!item || !state.isAdmin) return;
+      state.telegramDialogNewsId = newsId;
+      els.telegramNews.textContent = displayTitle(item);
+      els.telegramGroups.innerHTML = state.telegramGroups.length
+        ? state.telegramGroups.map((group) => `
+          <label class="telegram-group-option">
+            <input type="checkbox" value="${escapeHtml(group.id)}">
+            <span>
+              <strong>${escapeHtml(group.name || "Nhóm Telegram")}</strong>
+              <span>${escapeHtml(group.chatId || "")}</span>
+            </span>
+          </label>
+        `).join("")
+        : `<div class="empty">Chưa có nhóm Telegram đang bật. Vào News Ops để thêm nhóm.</div>`;
+      const logs = telegramLogsForNews(newsId);
+      els.telegramHistory.innerHTML = logs.length
+        ? logs.slice(0, 5).map((log) => {
+          const groups = Array.isArray(log.groupIds) ? log.groupIds.map(telegramGroupName).join(", ") : "";
+          return `<div>${escapeHtml(log.status || "")}: ${escapeHtml(groups)} ${escapeHtml(formatTime(log.pushedAt))}</div>`;
+        }).join("")
+        : "Chưa có lịch sử đẩy Telegram cho tin này.";
+      els.telegramConfirm.disabled = !state.telegramGroups.length;
+      els.telegramSendAll.disabled = !state.telegramGroups.length;
+      els.telegramModal.classList.remove("hidden");
+    }
+
+    function closeTelegramModal() {
+      state.telegramDialogNewsId = "";
+      els.telegramModal.classList.add("hidden");
+    }
+
+    function telegramPayload(item, groups) {
+      return {
+        title: displayTitle(item),
+        link: itemUrl(item),
+        summary: displaySummary(item),
+        source: itemSource(item),
+        publishedAt: formatTime(item.publishedAt || item.createdAt),
+        groups: groups.map((group) => ({
+          name: group.name || group.id,
+          chatId: group.chatId,
+        })),
+      };
+    }
+
+    async function confirmTelegramPush(sendAll = false) {
+      if (!state.isAdmin || !state.telegramDialogNewsId) return;
+      const groupIds = sendAll
+        ? state.telegramGroups.map((group) => group.id)
+        : Array.from(els.telegramGroups.querySelectorAll("input:checked")).map((input) => input.value);
+      if (!groupIds.length) {
+        els.telegramHistory.textContent = "Chọn ít nhất một nhóm Telegram.";
         return;
       }
-
-      if (!state.groups.length) {
-        listEl.innerHTML = `
-          <div class="empty">
-            Không có tin phù hợp bộ lọc hiện tại.
-            ${activeFilters().length ? `<button class="active-filter-reset" type="button" data-reset-filters>Xóa bộ lọc</button>` : ""}
-          </div>
-        `;
+      const item = state.items.find((row) => row.id === state.telegramDialogNewsId);
+      const groups = groupIds.map((id) => state.telegramGroups.find((group) => group.id === id)).filter(Boolean);
+      if (!item || !groups.length) {
+        els.telegramHistory.textContent = "Không tìm thấy tin hoặc nhóm Telegram.";
         return;
       }
-
-      const heading = state.view === "all" ? `<div class="subtext">Hot news stream</div>` : "";
-      listEl.innerHTML = heading + state.groups.slice(0, state.renderLimit).map(renderGroupCard).join("");
+      els.telegramConfirm.disabled = true;
+      els.telegramSendAll.disabled = true;
+      els.telegramHistory.textContent = "Đang gửi Telegram...";
+      try {
+        const response = await fetch("http://localhost:8787/send-telegram", {
+          method: "POST",
+          headers: {"content-type": "application/json"},
+          body: JSON.stringify(telegramPayload(item, groups)),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok && response.status !== 207) {
+          throw new Error(result.error || `Local server HTTP ${response.status}`);
+        }
+        const failed = Array.isArray(result.results) ? result.results.filter((row) => row.status !== "success") : [];
+        if (failed.length) {
+          throw new Error(failed.map((row) => `${row.group}: ${row.error}`).join("; "));
+        }
+        state.telegramPushedNews.set(state.telegramDialogNewsId, groups.map((group) => group.name || group.id));
+        els.telegramHistory.textContent = "Đã gửi Telegram qua local server.";
+        render();
+        setTimeout(closeTelegramModal, 500);
+      } catch (error) {
+        els.telegramHistory.textContent = `Không gửi được Telegram: ${error.message || error}. Kiểm tra npm run telegram-server.`;
+      } finally {
+        els.telegramConfirm.disabled = false;
+        els.telegramSendAll.disabled = false;
+      }
     }
 
-    function summarizeDetailedHtml(items, limit) {
-      if (!items.length) return "<p>- Chưa có tin nổi bật trong nhóm này.</p>";
-      const rows = items.slice(0, limit).map((item) => {
-        const tickers = Array.isArray(item.tickers) && item.tickers.length
-          ? item.tickers.join(", ")
-          : "Không xác định";
-        const url = safeArticleUrl(item);
-        const link = url
-          ? ` | <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Mở bài gốc</a>`
-          : "";
-
-        return [
-          "<li>",
-          `<strong>${escapeHtml(item.title || "Không có tiêu đề")}</strong><br>`,
-          `Mã: ${escapeHtml(tickers)} | Nguồn: ${escapeHtml(item.source || "Unknown")} | Thời gian: ${escapeHtml(formatTime(item.publishedAt))}${link}`,
-          "</li>",
-        ].join("");
-      }).join("");
-      return `<ul>${rows}</ul>`;
-    }
-
-    function dominantMarketSentiment(items) {
-      const counts = items.reduce((acc, item) => {
-        const key = item.marketSentiment || "neutral";
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {});
-      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "neutral";
-    }
-
-    function createBrokerBulletin() {
-      const visibleItems = state.filtered;
-      const usefulItems = visibleItems.filter((item) => item.isNoise !== true);
-      const noiseHidden = state.items.filter((item) => item.isNoise === true).length;
-      const sentiment = dominantMarketSentiment(usefulItems);
-      const marketItems = usefulItems.filter((item) => item.newsType === "market_movement");
-      const macroItems = usefulItems.filter((item) => item.newsType === "macro");
-      const riskItems = usefulItems
-        .filter((item) => item.brokerDecision === "urgent_alert" || item.newsType === "risk_event")
-        .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
-        .slice(0, 5);
-      const tickerSectorItems = usefulItems
-        .filter((item) => (
-          (Array.isArray(item.tickers) && item.tickers.length) ||
-          (Array.isArray(item.sectors) && item.sectors.length)
-        ))
-        .filter((item) => ["hot", "important", "watch"].includes(priorityOf(item)))
-        .sort((a, b) => (b.confidenceScore || 0) - (a.confidenceScore || 0))
-        .slice(0, 7);
-      const macroSectorItems = usefulItems
-        .filter((item) => item.newsType === "macro" || (Array.isArray(item.sectors) && item.sectors.length))
-        .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
-        .slice(0, 5);
-
-      const contextLine = marketItems.length || macroItems.length
-        ? `Thị trường đang có ${marketItems.length} tin vận động thị trường và ${macroItems.length} tin vĩ mô đáng theo dõi. Market sentiment nổi bật là ${sentiment}; nên đọc cùng phản ứng VN-Index, thanh khoản và hành vi khối ngoại.`
-        : `Chưa có nhiều tín hiệu thị trường chung trong bộ lọc hiện tại. Market sentiment tạm thời là ${sentiment}; ưu tiên quan sát thêm thanh khoản và nhóm dẫn dắt.`;
-
-      bulletinOutputEl.innerHTML = [
-        "<h3>BẢN TIN BROKER HÔM NAY</h3>",
-        "<h4>1. Bối cảnh thị trường</h4>",
-        `<p>${escapeHtml(contextLine)}</p>`,
-        "<p>Các tín hiệu trong ngày nên được kiểm tra cùng giá, thanh khoản và mức độ lan tỏa trước khi đưa vào tư vấn.</p>",
-        "<h4>2. Tin rủi ro cần cảnh báo</h4>",
-        summarizeDetailedHtml(riskItems, 5),
-        "<h4>3. Tin đáng chú ý theo mã/ngành</h4>",
-        summarizeDetailedHtml(tickerSectorItems, 7),
-        "<h4>4. Vĩ mô/ngành cần theo dõi</h4>",
-        summarizeDetailedHtml(macroSectorItems, 5),
-        "<h4>5. Tin nhiễu/giá trị thấp đã loại bỏ</h4>",
-        `<p>- Đang ẩn ${escapeHtml(noiseHidden)} tin nhiễu như ETF/NAV, hoán đổi hoặc thông báo kỹ thuật giá trị tư vấn thấp.</p>`,
-        "<h4>6. Định hướng hành động</h4>",
-        "<ul>",
-        "<li>Ưu tiên an toàn vốn.</li>",
-        "<li>Không FOMO với tin tích cực đơn lẻ.</li>",
-        "<li>Chờ xác nhận kỹ thuật, giá và thanh khoản.</li>",
-        "<li>Với mã có tin rủi ro, kiểm tra tỷ trọng và mức chịu rủi ro.</li>",
-        "</ul>",
-      ].join("");
-
-      state.bulletinGenerated = true;
-      state.bulletinCollapsed = false;
-      bulletinEl.classList.add("visible");
-      bulletinToggleButtonEl.hidden = false;
-      bulletinToggleButtonEl.textContent = "Thu gọn bản tin";
-    }
-
-    function toggleBulletin() {
-      if (!state.bulletinGenerated) return;
-      state.bulletinCollapsed = !state.bulletinCollapsed;
-      bulletinEl.classList.toggle("visible", !state.bulletinCollapsed);
-      bulletinToggleButtonEl.textContent = state.bulletinCollapsed ? "Mở lại bản tin" : "Thu gọn bản tin";
+    async function hardRefresh() {
+      state.query = "";
+      state.sector = "all";
+      state.source = "all";
+      state.sort = "newest";
+      state.renderLimit = RENDER_STEP;
+      state.readLinks = new Set();
+      els.search.value = "";
+      els.sector.value = "all";
+      els.source.value = "all";
+      els.sort.value = "newest";
+      state.expandedSources.clear();
+      try { localStorage.removeItem(READ_LINKS_KEY); } catch {}
+      await loadAdminOverrides({source: "server"}).catch(() => { state.adminOverrides = []; });
+      await loadNews({source: "server"});
     }
 
     function bindEvents() {
-      tabsToggleEl.addEventListener("click", () => {
-        state.tabsExpanded = !state.tabsExpanded;
-        renderTabs();
-      });
-
-      letterFilterEl.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-letter]");
+      els.channelTabs.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-channel]");
         if (!button) return;
-        state.tickerLetter = state.tickerLetter === button.dataset.letter ? "all" : button.dataset.letter;
-        renderLetterFilter();
-        applyFilterChange();
+        state.channel = button.dataset.channel || "market";
+        state.renderLimit = RENDER_STEP;
+        state.expandedSources.clear();
+        render();
       });
-
-      timeFilterEl.addEventListener("change", () => {
-        state.timeSort = ["newest", "oldest"].includes(timeFilterEl.value) ? timeFilterEl.value : "default";
-        applyFilterChange();
+      els.search.addEventListener("input", () => {
+        state.query = els.search.value.trim();
+        state.renderLimit = RENDER_STEP;
+        state.expandedSources.clear();
+        render();
       });
-
-      scoreFilterEl.addEventListener("change", () => {
-        state.scoreSort = ["score_desc", "score_asc"].includes(scoreFilterEl.value) ? scoreFilterEl.value : "default";
-        applyFilterChange();
+      els.clearSearch.addEventListener("click", () => {
+        state.query = "";
+        els.search.value = "";
+        state.expandedSources.clear();
+        render();
       });
-
-      sourceScopeFilterEl.addEventListener("change", () => {
-        state.sourceScope = sourceScopeFilterEl.value === "extended" ? "extended" : "trusted";
-        applyFilterChange();
+      els.sector.addEventListener("change", () => {
+        state.sector = els.sector.value || "all";
+        state.renderLimit = RENDER_STEP;
+        state.expandedSources.clear();
+        render();
       });
-
-      summaryEl.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-summary-filter]");
-        if (!button) return;
-        const nextFilter = button.dataset.summaryFilter;
-        state.summaryFilter = state.summaryFilter === nextFilter ? "all" : nextFilter;
-        applyFilterChange();
+      els.source.addEventListener("change", () => {
+        state.source = els.source.value || "all";
+        state.renderLimit = RENDER_STEP;
+        state.expandedSources.clear();
+        render();
       });
-
-      tabsEl.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-view]");
-        if (!button) return;
-        state.view = state.view === button.dataset.view ? "all" : button.dataset.view;
-        renderTabs();
-        applyFilterChange();
+      els.sort.addEventListener("change", () => {
+        state.sort = els.sort.value || "newest";
+        render();
       });
-
-      document.querySelectorAll("[data-priority]").forEach((button) => {
-        button.addEventListener("click", () => {
-          document.querySelectorAll("[data-priority]").forEach((el) => el.classList.remove("active"));
-          button.classList.add("active");
-          state.priority = button.dataset.priority;
-          applyFilterChange();
-        });
+      els.viewNews.addEventListener("click", () => {
+        state.view = "news";
+        render();
       });
-
-      tickerSearchEl.addEventListener("input", () => {
-        state.ticker = tickerSearchEl.value.trim();
-        applyFilterChange();
+      els.viewSource.addEventListener("click", () => {
+        state.view = "source";
+        render();
       });
-
-      clearSearchEl.addEventListener("click", () => {
-        clearFilter("search");
-        tickerSearchEl.focus();
+      els.refresh.addEventListener("click", hardRefresh);
+      els.loadMore.addEventListener("click", () => {
+        state.renderLimit += RENDER_STEP;
+        render();
       });
-
-      resetFiltersEl.addEventListener("click", resetFilters);
-
-      activeFilterBarEl.addEventListener("click", (event) => {
-        const clearButton = event.target.closest("[data-clear-filter]");
-        if (clearButton) {
-          clearFilter(clearButton.dataset.clearFilter);
+      els.list.addEventListener("click", (event) => {
+        const sourceToggle = event.target.closest("[data-source-toggle]");
+        if (sourceToggle) {
+          const source = sourceToggle.dataset.sourceToggle || "";
+          if (state.expandedSources.has(source)) state.expandedSources.delete(source);
+          else state.expandedSources.add(source);
+          render();
           return;
         }
-        if (event.target.closest("#active-reset-filters")) resetFilters();
-      });
-
-      [
-        [newsTypeFilterEl, "newsType"],
-        [sectorFilterEl, "sector"],
-        [marketSentimentFilterEl, "marketSentiment"],
-        [impactHorizonFilterEl, "impactHorizon"],
-        [signalStrengthFilterEl, "signalStrength"],
-        [brokerDecisionFilterEl, "brokerDecision"],
-        [sourceFilterEl, "source"],
-      ].forEach(([element, key]) => {
-        element.addEventListener("change", () => {
-          state[key] = element.value;
-          applyFilterChange();
-        });
-      });
-
-      showNoiseToggleEl.addEventListener("change", () => {
-        state.showNoise = showNoiseToggleEl.checked;
-        applyFilterChange();
-      });
-
-      listEl.addEventListener("click", (event) => {
-        if (event.target.closest("[data-reset-filters]")) {
-          resetFilters();
+        const telegramButton = event.target.closest("[data-telegram-push]");
+        if (telegramButton) {
+          openTelegramModal(telegramButton.dataset.telegramPush);
           return;
         }
-        const detailButton = event.target.closest("[data-open-detail]");
-        if (!detailButton) return;
-        event.preventDefault();
-        event.stopPropagation();
-        openDetail(detailButton.dataset.openDetail);
+        const link = event.target.closest("[data-read-url]");
+        if (!link) return;
+        markRead(link.dataset.readUrl || link.href);
+        link.classList.add("read");
       });
-
-      dashboardEl.addEventListener("click", (event) => {
-        const row = event.target.closest("[data-source-url]");
-        if (!row) return;
-        window.open(row.dataset.sourceUrl, "_blank", "noopener,noreferrer");
+      els.telegramCancel.addEventListener("click", closeTelegramModal);
+      els.telegramConfirm.addEventListener("click", () => confirmTelegramPush());
+      els.telegramSendAll.addEventListener("click", () => confirmTelegramPush(true));
+      els.telegramModal.addEventListener("click", (event) => {
+        if (event.target === els.telegramModal) closeTelegramModal();
       });
-
-      detailCloseEl.addEventListener("click", closeDetail);
-      detailBackdropEl.addEventListener("click", (event) => {
-        if (event.target === detailBackdropEl) closeDetail();
-      });
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") closeDetail();
-      });
-
-      timelineToggleButtonEl.addEventListener("click", () => {
-        state.timelineMode = !state.timelineMode;
-        renderItems();
-      });
-      bulletinButtonEl.addEventListener("click", createBrokerBulletin);
-      bulletinToggleButtonEl.addEventListener("click", toggleBulletin);
-      loadMoreButtonEl.addEventListener("click", loadMoreItems);
-      newNewsButtonEl.addEventListener("click", () => {
-        hideNewNewsNotice();
-        renderItems();
-      });
-      window.addEventListener("scroll", maybeLoadMoreOnScroll, {passive: true});
     }
 
     function start() {
-      renderTabs();
-      renderLetterFilter();
       bindEvents();
-      loadNewsCache();
-      state.firstPageReady = state.masterNewsStore.length > 0;
-      if (state.firstPageReady) {
-        refreshFilterOptions();
-        renderItems();
-      }
-      if (!ensureFirebaseInitialized()) {
-        statusEl.textContent = "Không tải được Firebase SDK.";
+      renderTabs();
+      if (!window.firebase?.initializeApp) {
+        els.status.textContent = "Không tải được Firebase SDK.";
         return;
       }
-
+      firebase.initializeApp(window.NEW24H_FIREBASE_CONFIG);
       db = firebase.firestore();
-      updateLoadMoreState();
-
-      db.collection("news")
-        .orderBy("publishedAt", "desc")
-        .limit(PAGE_SIZE)
-        .onSnapshot((snapshot) => {
-          const incoming = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-          const shouldRender = isNearTop() || !state.firstPageReady;
-          const added = mergeIntoMasterStore(incoming, {deferRender: !shouldRender});
-          state.firstPageReady = true;
-          refreshFilterOptions();
-          if (shouldRender || !added) {
-            if (shouldRender) hideNewNewsNotice();
-            renderItems();
+      if (firebase.auth) {
+        firebase.auth().onAuthStateChanged((user) => {
+          currentUser = user;
+          state.isAdmin = Boolean(user && ALLOWED_ADMIN_EMAILS.includes(user.email));
+          if (state.isAdmin) loadTelegramAdminData();
+          else {
+            state.telegramGroups = [];
+            state.telegramLogs = [];
+            state.telegramPushedNews.clear();
+            state.telegramAutoPushedNews.clear();
+            state.telegramAutoPushEnabled = false;
+            render();
           }
-        }, (error) => {
-          state.firstPageReady = true;
-          statusEl.textContent = `Lỗi Firestore: ${error.message}`;
-          updateLoadMoreState();
         });
-
-      state.syncTimer = window.setInterval(() => syncNewerItems(), AUTO_SYNC_INTERVAL_MS);
+      }
+      loadAdminOverrides()
+        .catch(() => { state.adminOverrides = []; })
+        .finally(loadNews);
     }
 
     window.addEventListener("load", start);
   </script>
 </body>
 </html>
+

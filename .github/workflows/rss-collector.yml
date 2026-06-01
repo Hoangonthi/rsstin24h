@@ -2,7 +2,7 @@ name: RSS Collector
 
 on:
   schedule:
-    - cron: "*/6 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  collect:
+  rss:
     name: Collect latest RSS news
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -24,12 +24,15 @@ jobs:
       WATCHER_MAX_ITEMS: "20"
       WATCHER_CATEGORY_BASE_MINUTES: "6"
       WATCHER_FETCH_TIMEOUT_MS: "12000"
+      WATCHER_ONCE_ROUNDS: "5"
+      WATCHER_ONCE_TIME_BUDGET_MS: "540000"
+      WATCHER_ONCE_ROUND_DELAY_MS: "1000"
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -48,7 +51,7 @@ jobs:
             exit 1
           fi
 
-      - name: Install dependencies
+      - name: Install deps
         run: npm ci
 
       - name: Run RSS collector

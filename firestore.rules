@@ -7,12 +7,118 @@ service cloud.firestore {
         && request.auth.token.email in ["vvhoangvn@gmail.com"];
     }
 
+    function isValidUrl(value) {
+      return value is string
+        && value.size() >= 8
+        && value.size() <= 2048
+        && (value.matches("^https://.*") || value.matches("^http://.*"));
+    }
+
+    function optionalString(data, field, maxSize) {
+      return !data.keys().hasAny([field])
+        || (data[field] is string && data[field].size() <= maxSize);
+    }
+
+    function optionalNumber(data, field) {
+      return !data.keys().hasAny([field]) || data[field] is number;
+    }
+
+    function optionalStringList(data, field, maxItems) {
+      return !data.keys().hasAny([field])
+        || (data[field] is list && data[field].size() <= maxItems);
+    }
+
+    function manualNewsAllowedFields() {
+      return [
+        "url", "title", "source", "sourceName", "publishedAt", "summary",
+        "content", "contentText", "tickers", "sectors", "eventType",
+        "sentiment", "impactLevel", "adminNote", "status", "createdAt",
+        "updatedAt", "createdBy", "isManual", "uiBadge", "category", "group",
+        "sourceUrl", "link", "originalUrl", "canonicalUrl", "primaryTickers",
+        "relatedStocks", "watchlistStocks", "tickerDetails", "horizon",
+        "confidence", "matchedBy", "reason"
+      ];
+    }
+
+    function isValidManualNews(data) {
+      return data.keys().hasOnly(manualNewsAllowedFields())
+        && data.keys().hasAll([
+          "url", "title", "source", "publishedAt", "summary", "content",
+          "tickers", "sectors", "eventType", "sentiment", "impactLevel",
+          "adminNote", "status", "createdAt", "updatedAt", "createdBy"
+        ])
+        && isValidUrl(data.url)
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 300
+        && data.source is string && data.source.size() > 0 && data.source.size() <= 120
+        && data.publishedAt is timestamp
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && data.createdBy is string && data.createdBy.size() > 0 && data.createdBy.size() <= 120
+        && data.summary is string && data.summary.size() <= 2000
+        && data.content is string && data.content.size() <= 8000
+        && data.adminNote is string && data.adminNote.size() <= 2000
+        && data.tickers is list && data.tickers.size() <= 20
+        && data.sectors is list && data.sectors.size() <= 20
+        && data.sentiment in ["positive", "neutral", "negative"]
+        && data.impactLevel in ["low", "normal", "high"]
+        && data.status in ["draft", "published", "hidden"]
+        && optionalString(data, "sourceName", 120)
+        && optionalString(data, "contentText", 8000)
+        && optionalString(data, "eventType", 80)
+        && optionalString(data, "uiBadge", 40)
+        && optionalString(data, "category", 40)
+        && optionalString(data, "group", 40)
+        && optionalString(data, "sourceUrl", 2048)
+        && optionalString(data, "link", 2048)
+        && optionalString(data, "originalUrl", 2048)
+        && optionalString(data, "canonicalUrl", 2048)
+        && optionalString(data, "horizon", 80)
+        && optionalString(data, "reason", 1000)
+        && optionalNumber(data, "confidence")
+        && optionalStringList(data, "primaryTickers", 5)
+        && optionalStringList(data, "relatedStocks", 20)
+        && optionalStringList(data, "watchlistStocks", 20)
+        && optionalStringList(data, "matchedBy", 20)
+        && (!data.keys().hasAny(["isManual"]) || data.isManual == true)
+        && (!data.keys().hasAny(["tickerDetails"]) || (data.tickerDetails is list && data.tickerDetails.size() <= 40));
+    }
+
+    function isValidTelegramGroup(data) {
+      return data.keys().hasOnly(["name", "chatId", "active", "createdAt", "updatedAt"])
+        && data.keys().hasAll(["name", "chatId", "active", "createdAt", "updatedAt"])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 120
+        && data.chatId is string && data.chatId.size() > 0 && data.chatId.size() <= 120
+        && data.active is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidTelegramAutoPushSetting(data) {
+      return data.keys().hasOnly(["enabled", "updatedAt", "updatedBy"])
+        && data.keys().hasAll(["enabled", "updatedAt", "updatedBy"])
+        && data.enabled is bool
+        && data.updatedAt is timestamp
+        && data.updatedBy is string && data.updatedBy.size() > 0 && data.updatedBy.size() <= 120;
+    }
+
     match /news/{newsId} {
       // Development rules for the Spark/free RSS dashboard:
       // local firebase-admin scripts bypass rules and can write.
       // Lock reads to authenticated users before public production use.
       allow read: if true;
       allow write: if false;
+    }
+
+    match /manual_news/{newsId} {
+      allow read: if resource.data.status == "published" || isNewsOpsAdmin();
+      allow create: if isNewsOpsAdmin()
+        && isValidManualNews(request.resource.data)
+        && request.resource.data.createdBy == request.auth.token.email;
+      allow update: if isNewsOpsAdmin()
+        && isValidManualNews(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if isNewsOpsAdmin();
     }
 
     match /rss_sources/{sourceId} {
@@ -26,6 +132,34 @@ service cloud.firestore {
     match /ops_requests/{requestId} {
       // Queue for News Ops actions. VPS/admin scripts can process these.
       allow read, write: if isNewsOpsAdmin();
+    }
+
+    match /market_admin_overrides/{ruleId} {
+      // Hard admin decisions used by the lightweight public dashboard.
+      allow read: if isNewsOpsAdmin() || resource.data.active == true;
+      allow create, update, delete: if isNewsOpsAdmin();
+    }
+
+    match /telegram_groups/{groupId} {
+      allow read: if isNewsOpsAdmin();
+      allow create: if isNewsOpsAdmin() && isValidTelegramGroup(request.resource.data);
+      allow update: if isNewsOpsAdmin()
+        && isValidTelegramGroup(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isNewsOpsAdmin();
+    }
+
+    match /telegram_push_logs/{logId} {
+      allow read: if isNewsOpsAdmin();
+      allow write: if false;
+    }
+
+    match /telegram_settings/{settingId} {
+      allow read: if isNewsOpsAdmin();
+      allow create, update: if isNewsOpsAdmin()
+        && settingId == "auto_push"
+        && isValidTelegramAutoPushSetting(request.resource.data);
+      allow delete: if false;
     }
 
     match /watcher_logs/{logId} {

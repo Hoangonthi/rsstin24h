@@ -80,6 +80,30 @@
       padding: 12px;
       margin-bottom: 12px;
     }
+    .panel-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+    }
+    .panel-heading h2 { margin: 0; }
+    .panel-toggle {
+      flex: 0 0 auto;
+      min-width: 56px;
+      min-height: 26px;
+      padding: 0 8px;
+      font-size: 0.75rem;
+      color: #bae6fd;
+      border-color: rgba(56, 189, 248, 0.34);
+      background: rgba(14, 116, 144, 0.12);
+    }
+    .panel-body { margin-top: 10px; }
+    .panel.is-collapsed .panel-body { display: none; }
+    .panel.is-collapsed {
+      padding-bottom: 10px;
+      background: rgba(16, 24, 39, 0.72);
+    }
     .grid {
       display: grid;
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -87,6 +111,7 @@
       align-items: center;
     }
     .grid .wide { grid-column: span 2; }
+    .grid #source-url { grid-column: span 3; }
     .grid .full { grid-column: 1 / -1; }
     .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 9px; }
     .primary { border-color: rgba(56, 189, 248, 0.55); background: rgba(56, 189, 248, 0.14); }
@@ -112,6 +137,19 @@
     th, td { border-bottom: 1px solid rgba(148, 163, 184, 0.12); padding: 7px 8px; text-align: left; vertical-align: top; }
     th { color: #cbd5e1; background: rgba(15, 23, 42, 0.86); position: sticky; top: 0; z-index: 1; }
     td.url { max-width: 260px; overflow-wrap: anywhere; color: var(--muted); }
+    .source-manager-table { min-width: 1180px; table-layout: fixed; }
+    .source-manager-table th:nth-child(1),
+    .source-manager-table td:nth-child(1) { width: 180px; }
+    .source-manager-table th:nth-child(2),
+    .source-manager-table td:nth-child(2) { width: 420px; }
+    .source-manager-table td.url {
+      max-width: none;
+      color: #bae6fd;
+      line-height: 1.35;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
     td.actions-cell { min-width: 290px; }
     .compact-actions { display: flex; flex-wrap: wrap; gap: 5px; }
     .compact-actions button { min-height: 25px; padding: 0 7px; font-size: 0.74rem; }
@@ -129,6 +167,175 @@
     }
     .stat span { color: var(--muted); font-size: 0.72rem; }
     .stat strong { display: block; margin-top: 3px; font-size: 1.05rem; }
+    .override-saved-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .override-saved-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px 10px;
+      align-items: center;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.76);
+      padding: 9px;
+    }
+    .override-saved-card strong {
+      color: #e0f2fe;
+      font-size: 0.84rem;
+    }
+    .override-saved-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.35;
+    }
+    .override-saved-card .compact-actions {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+      align-self: center;
+    }
+    .override-admin-layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 0.82fr) minmax(520px, 1.18fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .override-editor {
+      grid-column: 1 / -1;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 8px;
+      background: rgba(245, 158, 11, 0.055);
+      padding: 10px;
+    }
+    .override-saved-panel,
+    .override-news-panel {
+      min-width: 0;
+    }
+    .override-saved-panel h3,
+    .override-news-panel h3 {
+      margin: 0 0 10px;
+      color: #dbeafe;
+      font-size: 0.95rem;
+    }
+    .override-news-panel .table-wrap {
+      max-height: 560px;
+      overflow: auto;
+    }
+    .override-search {
+      margin: 0 0 10px;
+      max-width: 360px;
+    }
+    .override-phrase-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(140px, 1fr) 78px minmax(140px, 1fr) 78px minmax(140px, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+    .override-phrase-row select {
+      min-width: 0;
+      padding-inline: 8px;
+      text-align: center;
+    }
+    .override-guide {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 7px;
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      border-radius: 8px;
+      background: rgba(14, 165, 233, 0.075);
+      padding: 10px 12px;
+      color: #cbd5e1;
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+    .override-guide strong {
+      color: #f8fafc;
+      font-size: 0.88rem;
+    }
+    .override-guide code {
+      color: #7dd3fc;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 6px;
+      padding: 1px 5px;
+    }
+    .override-field-note {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: 0.76rem;
+      line-height: 1.45;
+      margin-top: -2px;
+    }
+    .override-news-panel table {
+      min-width: 0;
+      table-layout: fixed;
+    }
+    .override-news-panel th:first-child,
+    .override-news-panel td:first-child {
+      width: 112px;
+      white-space: nowrap;
+    }
+    .override-news-panel th:nth-child(3),
+    .override-news-panel td:nth-child(3) {
+      width: 190px;
+    }
+    .override-news-selected {
+      background: rgba(34, 197, 94, 0.08);
+      box-shadow: inset 3px 0 0 rgba(34, 197, 94, 0.72);
+    }
+    .override-news-selected button[data-override-from-news] {
+      border-color: rgba(34, 197, 94, 0.62);
+      background: rgba(22, 101, 52, 0.32);
+      color: #bbf7d0;
+      font-weight: 850;
+    }
+    .override-ungrouped-alert {
+      margin-top: 12px;
+      border: 1px solid rgba(251, 191, 36, 0.28);
+      border-radius: 8px;
+      background: rgba(120, 53, 15, 0.12);
+      padding: 10px;
+    }
+    .override-ungrouped-alert h3 {
+      margin: 0 0 6px;
+      color: #fde68a;
+      font-size: 0.95rem;
+    }
+    .override-ungrouped-list {
+      display: grid;
+      gap: 6px;
+      max-height: 260px;
+      overflow: auto;
+      margin-top: 8px;
+    }
+    .override-ungrouped-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 7px;
+      background: rgba(15, 23, 42, 0.74);
+      padding: 7px 8px;
+    }
+    .override-ungrouped-item strong {
+      display: block;
+      color: #f8fafc;
+      font-size: 0.82rem;
+      line-height: 1.3;
+    }
     .lock {
       max-width: 620px;
       margin: 12vh auto 0;
@@ -141,10 +348,180 @@
     .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .samples { margin: 0; padding-left: 18px; color: #cbd5e1; }
     .samples li { margin-bottom: 4px; }
+    .debug-output {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .debug-card {
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 8px;
+      background: var(--panel-2);
+      padding: 9px;
+      min-width: 0;
+    }
+    .debug-card h3 {
+      margin: 0 0 6px;
+      color: #dbeafe;
+      font-size: 0.82rem;
+    }
+    .debug-lines {
+      display: grid;
+      gap: 4px;
+      color: #cbd5e1;
+      font-size: 0.78rem;
+      line-height: 1.38;
+    }
+    .debug-lines strong { color: #f8fafc; }
+    .debug-pre {
+      max-height: 260px;
+      overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 7px;
+      background: rgba(2, 6, 23, 0.42);
+      padding: 8px;
+      font-size: 0.72rem;
+      color: #cbd5e1;
+    }
+    .manual-ops-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .manual-ops-form {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 0.36fr);
+      gap: 9px;
+    }
+    .manual-ops-form label,
+    .manual-advanced-grid label {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+    .manual-ops-form label span,
+    .manual-advanced-grid label span {
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
+    .manual-ops-form .full,
+    .manual-advanced-grid .full {
+      grid-column: 1 / -1;
+    }
+    .manual-url-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 8px;
+    }
+    .manual-ops-form textarea {
+      min-height: 76px;
+    }
+    .manual-ops-advanced {
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.025);
+      padding: 8px 10px;
+    }
+    .manual-ops-advanced summary {
+      width: fit-content;
+      cursor: pointer;
+      color: #93c5fd;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+    .manual-advanced-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 9px;
+    }
+    .manual-analysis-preview {
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      border-radius: 7px;
+      background: rgba(14, 116, 144, 0.08);
+      color: #cbd5e1;
+      padding: 8px 9px;
+      font-size: 0.8rem;
+      line-height: 1.42;
+    }
+    .manual-list {
+      display: grid;
+      gap: 8px;
+      max-height: 560px;
+      overflow: auto;
+      margin-top: 10px;
+    }
+    .telegram-manager-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.55fr) minmax(420px, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+    .telegram-form {
+      display: grid;
+      gap: 8px;
+    }
+    .telegram-form label {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+    .telegram-form label span {
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
+    .telegram-table {
+      min-width: 760px;
+    }
+    .telegram-chat-id {
+      max-width: 230px;
+      overflow-wrap: anywhere;
+      color: #bae6fd;
+    }
+    .manual-card {
+      display: grid;
+      gap: 6px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.72);
+      padding: 9px;
+    }
+    .manual-card strong {
+      color: #e0f2fe;
+      font-size: 0.84rem;
+      line-height: 1.35;
+    }
+    .manual-card-meta,
+    .manual-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .manual-card-meta {
+      color: var(--muted);
+      font-size: 0.74rem;
+      line-height: 1.35;
+    }
+    .manual-card-actions button {
+      min-height: 25px;
+      padding: 0 8px;
+      font-size: 0.74rem;
+    }
     @media (max-width: 980px) {
       .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid .wide { grid-column: 1 / -1; }
       .two-col { grid-template-columns: 1fr; }
+      .override-admin-layout { grid-template-columns: 1fr; }
+      .override-phrase-row { grid-template-columns: 1fr; }
+      .manual-ops-layout,
+      .telegram-manager-layout,
+      .manual-ops-form,
+      .manual-url-row,
+      .manual-advanced-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 560px) {
       body { padding: 12px; }
@@ -173,11 +550,133 @@
       </div>
       <div class="status">
         <div id="status">Đang khởi tạo...</div>
-        <a href="/">Mở dashboard public</a>
+        <a id="public-dashboard-link" href="/">Mở dashboard public</a>
       </div>
     </header>
 
     <section class="stats-grid" id="ops-stats"></section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Tải tin tự động</h2>
+        <span id="watcher-running-pill" class="pill warn">local</span>
+      </div>
+      <div class="actions">
+        <button id="watcher-auto-toggle" class="primary" type="button">Tải tin tự động: OFF</button>
+        <span id="watcher-auto-status" class="meta">Local watcher đang tắt.</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Telegram</h2>
+        <span id="telegram-count" class="pill">0 nhóm</span>
+      </div>
+      <div class="actions">
+        <button id="telegram-auto-toggle" class="primary" type="button">Auto Push Telegram: OFF</button>
+        <span id="telegram-auto-status" class="meta">Auto push đang tắt.</span>
+      </div>
+      <div class="telegram-manager-layout panel-body">
+        <form id="telegram-form" class="telegram-form">
+          <input id="telegram-id" type="hidden">
+          <label>
+            <span>Tên nhóm</span>
+            <input id="telegram-name" placeholder="VD: Tin nóng chứng khoán" required>
+          </label>
+          <label>
+            <span>chat_id</span>
+            <input id="telegram-chat-id" placeholder="-1001234567890" required>
+          </label>
+          <label class="pill"><input id="telegram-active" type="checkbox" checked> active</label>
+          <div class="actions">
+            <button id="telegram-save" class="primary" type="submit">Lưu nhóm</button>
+            <button id="telegram-reset" type="button">Reset</button>
+          </div>
+          <p id="telegram-status" class="meta"></p>
+        </form>
+        <div class="table-wrap">
+          <table class="telegram-table">
+            <thead>
+              <tr><th>Tên nhóm</th><th>chat_id</th><th>Active</th><th>Cập nhật</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="telegram-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Thêm tin thủ công</h2>
+      <div class="manual-ops-layout">
+        <form id="manual-news-form" class="manual-ops-form">
+          <input id="manual-news-id" type="hidden">
+          <label class="full">
+            <span>Link bài viết</span>
+            <div class="manual-url-row">
+              <input id="manual-url" type="url" placeholder="https://..." autocomplete="off" required>
+              <button id="manual-paste" type="button">Dán nhanh</button>
+              <button id="manual-fetch-meta" type="button">Lấy thông tin</button>
+            </div>
+          </label>
+          <label>
+            <span>Tiêu đề</span>
+            <input id="manual-title" placeholder="Tự lấy từ link, có thể sửa">
+          </label>
+          <label>
+            <span>Nguồn</span>
+            <input id="manual-source" placeholder="Tự nhận diện, có thể sửa">
+          </label>
+          <label class="full">
+            <span>Tóm tắt ngắn</span>
+            <textarea id="manual-summary" placeholder="Meta description hoặc tóm tắt ngắn"></textarea>
+          </label>
+          <details class="manual-ops-advanced full">
+            <summary>Nâng cao</summary>
+            <div class="manual-advanced-grid">
+              <label>
+                <span>Thời gian đăng</span>
+                <input id="manual-published-at" type="datetime-local">
+              </label>
+              <label>
+                <span>Trạng thái</span>
+                <select id="manual-status">
+                  <option value="published">published</option>
+                  <option value="draft">draft</option>
+                  <option value="hidden">hidden</option>
+                </select>
+              </label>
+              <label>
+                <span>Mã liên quan</span>
+                <input id="manual-tickers" placeholder="HPG, SSI">
+              </label>
+              <label>
+                <span>Ngành liên quan</span>
+                <input id="manual-sectors" placeholder="thép, chứng khoán">
+              </label>
+              <label class="full">
+                <span>Ghi chú admin</span>
+                <textarea id="manual-admin-note" placeholder="Ghi chú nội bộ"></textarea>
+              </label>
+            </div>
+          </details>
+          <div id="manual-analysis-preview" class="manual-analysis-preview full">Chưa phân tích.</div>
+          <div class="actions full">
+            <button id="manual-save" class="primary" type="submit">Lưu & xuất bản</button>
+            <button id="manual-save-draft" type="button">Lưu nháp</button>
+            <button id="manual-reanalyze" type="button">Phân tích lại</button>
+            <button id="manual-reset" type="button">Reset</button>
+          </div>
+          <p id="manual-status-line" class="meta full"></p>
+        </form>
+        <div class="manual-ops-list">
+          <div class="panel-heading">
+            <h2>Tin thủ công</h2>
+            <span id="manual-count" class="pill">0 tin</span>
+          </div>
+          <div id="manual-list" class="manual-list"></div>
+        </div>
+      </div>
+    </section>
 
     <section class="panel">
       <h2>A. Source Manager</h2>
@@ -205,6 +704,7 @@
           <option value="parser_24h">parser_24h</option>
           <option value="cafef">cafef</option>
           <option value="vietstock">vietstock</option>
+          <option value="vietstock_moi_cap_nhat">vietstock_moi_cap_nhat</option>
           <option value="parser_custom">parser_custom</option>
         </select>
         <label class="pill"><input id="source-allow" type="checkbox" checked> allowCrawl</label>
@@ -218,11 +718,11 @@
       </div>
       <p id="source-status" class="meta"></p>
       <div class="table-wrap">
-        <table>
+        <table class="source-manager-table">
           <thead>
             <tr>
               <th>Name</th><th>URL</th><th>Type</th><th>Active</th><th>Priority</th><th>Interval</th><th>Parser</th><th>Allow</th>
-              <th>Next fetch</th><th>Last checked</th><th>Last new</th><th>Status</th><th>Errors</th><th>HTTP</th><th>Blocked</th><th>Quality</th><th>Error</th><th>Checked</th><th>Saved</th><th>Duplicate</th><th>Actions</th>
+              <th>Next fetch</th><th>Last checked</th><th>Last new</th><th>Status</th><th>Errors</th><th>Actions</th>
             </tr>
           </thead>
           <tbody id="sources-body"></tbody>
@@ -273,20 +773,135 @@
     </section>
 
     <section class="panel">
-      <h2>D. Analyzer Ops</h2>
-      <div class="actions">
-        <button data-op="reanalyze_all" class="primary">Reanalyze all</button>
-        <button data-op="reanalyze_selected">Reanalyze selected</button>
-        <button data-op="cluster_rebuild">Cluster rebuild</button>
-        <button data-op="noise_review">Noise review</button>
-        <button data-op="force_refresh_all">Force refresh all active sources</button>
+      <h2>F. Admin g?n nhanh Market Intelligence</h2>
+      <p class="subtext">Nh?p t? kh?a/c?m t? b?t k?, ch?n nh?m v? c?ch l?y m?. V? d? c? th? d?ng "ch?ng quy?n", "c? t?c", "ni?m y?t", "tr?i phi?u" ho?c b?t k? m?u n?o b?n mu?n.</p>
+      <div class="override-admin-layout">
+        <div class="override-editor">
+          <div class="grid">
+            <div class="override-phrase-row">
+              <input id="override-title-pattern" placeholder="C?m 1, v? d?: ch?ng quy?n">
+              <select id="override-joiner-12" title="Quan h? gi?a c?m 1 v? c?m 2">
+                <option value="AND">V?</option>
+                <option value="OR">HO?C</option>
+              </select>
+              <input id="override-title-pattern-2" placeholder="C?m 2, v? d?: ni?m y?t">
+              <select id="override-joiner-23" title="Quan h? gi?a c?m 2 v? c?m 3">
+                <option value="AND">V?</option>
+                <option value="OR">HO?C</option>
+              </select>
+              <input id="override-title-pattern-3" placeholder="C?m 3, c? th? ?? tr?ng">
+            </div>
+            <select id="override-sector" class="wide">
+              <option value="Tin kh?c">Tin kh?c</option>
+              <option value="Qu?c t?">Qu?c t?</option>
+              <option value="Nga-UK">Nga-UK</option>
+              <option value="M?-Iran">M?-Iran</option>
+              <option value="V? m?">V? m?</option>
+              <option value="FX/Crypto">FX/Crypto</option>
+              <option value="Th? tr??ng">Th? tr??ng</option>
+              <option value="Ch?ng kho?n">Ch?ng kho?n</option>
+              <option value="Ng?n h?ng">Ng?n h?ng</option>
+              <option value="B?o hi?m">B?o hi?m</option>
+              <option value="B?t ??ng s?n">B?t ??ng s?n</option>
+              <option value="??u t? c?ng">??u t? c?ng</option>
+              <option value="T?i nguy?n">T?i nguy?n</option>
+              <option value="D?u kh?">D?u kh?</option>
+              <option value="?i?n">?i?n</option>
+              <option value="Th?p">Th?p</option>
+              <option value="Ph?n b?n / H?a ch?t">Ph?n b?n / H?a ch?t</option>
+              <option value="C?ng ngh? & Vi?n th?ng">C?ng ngh? & Vi?n th?ng</option>
+              <option value="V?ng/B?c">V?ng/B?c</option>
+              <option value="T? gi?">T? gi?</option>
+              <option value="B?n l? / Ti?u d?ng">B?n l? / Ti?u d?ng</option>
+              <option value="Khu c?ng nghi?p">Khu c?ng nghi?p</option>
+              <option value="Logistics / C?ng bi?n">Logistics / C?ng bi?n</option>
+              <option value="H?ng kh?ng">H?ng kh?ng</option>
+              <option value="Th?y s?n">Th?y s?n</option>
+              <option value="D?t may">D?t may</option>
+              <option value="Y t?">Y t?</option>
+              <option value="Gi?o d?c">Gi?o d?c</option>
+              <option value="Ph?p lu?t">Ph?p lu?t</option>
+              <option value="??i s?ng">??i s?ng</option>
+              <option value="Nh?m kh?c">Nh?m kh?c</option>
+            </select>
+            <input id="override-sector-other" class="wide" placeholder="Nh?p nh?m kh?c" hidden>
+            <input id="override-related-stocks" class="wide" placeholder="G?n m? c? ??nh, v? d?: HPG,HSG ho?c ?? tr?ng n?u mu?n t? l?y m?">
+            <select id="override-auto-ticker-mode" class="wide">
+              <option value="">Kh?ng t? l?y m?</option>
+              <option value="first_code">L?y m? ??u ti?n trong ti?u ??</option>
+              <option value="dotted_underlying">L?y m? tr??c d?u ch?m, v? d? VNM.KIS...</option>
+              <option value="warrant_underlying">M?u ch?ng quy?n: l?y m? c? s?</option>
+              <option value="regex">Regex t? ??nh ngh?a</option>
+            </select>
+            <input id="override-auto-ticker-regex" class="wide" placeholder="Regex c? nh?m b?t m?, v? d?: \b([A-Z]{2,5})\.">
+            <p class="meta full">B?n c? th? ??i "ch?ng quy?n" th?nh b?t k? c?m n?o. N?u ch?n t? l?y m?, h? th?ng s? l?y m? t? ti?u ?? khi tin kh?p c?m.</p>
+            <textarea id="override-phrases" class="full" hidden></textarea>
+            <select id="override-match-mode" hidden>
+              <option value="contains_phrase">Ch?a 1 c?m</option>
+              <option value="all_terms">C? t?t c? c?m</option>
+              <option value="ordered_terms">C? c?m theo th? t?</option>
+              <option value="exact_title">??ng ti?u ??</option>
+              <option value="starts_with">B?t ??u b?ng c?m</option>
+            </select>
+            <select id="override-scope" hidden>
+              <option value="title">Ch? match ti?u ??</option>
+              <option value="full_text">Match title + summary</option>
+            </select>
+            <input id="override-primary-tickers" hidden>
+            <input id="override-watchlist-stocks" hidden>
+            <input id="override-event-type" hidden>
+            <select id="override-sentiment" hidden>
+              <option value="neutral">neutral</option>
+              <option value="positive">positive</option>
+              <option value="negative">negative</option>
+              <option value="mixed">mixed</option>
+            </select>
+            <select id="override-impact" hidden>
+              <option value="medium">medium</option>
+              <option value="low">low</option>
+              <option value="high">high</option>
+            </select>
+            <input id="override-priority" type="number" value="1000" hidden>
+            <label class="pill" hidden><input id="override-active" type="checkbox" checked> active</label>
+            <textarea id="override-reason" class="full" hidden></textarea>
+          </div>
+          <div class="actions">
+            <button id="override-save" class="primary" type="button">L?u g?n m?c ??nh</button>
+            <button id="override-preset-warrant" type="button">M?u ch?ng quy?n + m?</button>
+            <button id="override-reset" type="button">Reset</button>
+            <button id="override-reload" type="button">Reload overrides</button>
+            <button id="override-test" class="good" type="button">Test g?n</button>
+          </div>
+          <div id="override-test-output" class="debug-pre">Ch?a c? k?t qu? test g?n.</div>
+          <p id="override-status" class="meta"></p>
+        </div>
+        <div class="override-saved-panel">
+          <h3>Các gán đã lưu</h3>
+          <input id="override-saved-search" class="override-search" type="search" placeholder="Tìm gán đã lưu...">
+          <div id="override-saved-list" class="override-saved-list">
+            <div class="empty">Chưa có gán nào được lưu.</div>
+          </div>
+        </div>
+        <div class="override-news-panel">
+          <h3>Tin mới để gán mẫu</h3>
+          <input id="override-news-search" class="override-search" type="search" placeholder="Tìm tin mới...">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Actions</th><th>Tin</th><th>Hiện tại</th></tr></thead>
+              <tbody id="override-news-body"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <p id="ops-status" class="meta">Các nút này tạo yêu cầu trong <code>ops_requests</code>; VPS/watcher có thể đọc để chạy tác vụ nặng.</p>
-      <div class="stats-grid" id="intelligence-stats"></div>
+      <div class="override-ungrouped-alert">
+        <h3>Tin đang thuộc Nhóm khác / chưa có nhóm rõ</h3>
+        <p id="override-ungrouped-summary" class="meta">Đang kiểm tra 100 tin mới nhất...</p>
+        <div id="override-ungrouped-list" class="override-ungrouped-list"></div>
+      </div>
     </section>
 
     <section class="panel">
-      <h2>E. Duplicate / Cluster View</h2>
+      <h2>G. Duplicate / Cluster View</h2>
       <div class="table-wrap">
         <table>
           <thead><tr><th>clusterId</th><th>duplicateCount</th><th>sources</th><th>merged titles</th><th>score</th></tr></thead>
@@ -294,6 +909,7 @@
         </table>
       </div>
     </section>
+
   </main>
 
   <script>
@@ -307,8 +923,22 @@
       news: [],
       editingId: null,
       bulkResults: [],
+      manualNews: [],
+      watcherAutoEnabled: false,
+      watcherRunning: false,
+      telegramGroups: [],
+      telegramAutoPushEnabled: false,
+      telegramAutoPushInFlight: false,
+      telegramAutoPushLastRunAt: 0,
+      editingTelegramId: null,
+      adminOverrides: [],
+      editingOverrideId: null,
+      overrideSourceNewsId: "",
+      overrideSavedSearch: "",
+      overrideNewsSearch: "",
     };
     let db;
+    let currentAdminUser = null;
 
     function ensureFirebaseInitialized(requireAuth = false) {
       if (!window.firebase || !firebase.firestore || (requireAuth && !firebase.auth)) return false;
@@ -321,26 +951,239 @@
     const $ = (id) => document.getElementById(id);
     const els = {
       status: $("status"),
+      publicDashboardLink: $("public-dashboard-link"),
       stats: $("ops-stats"),
       sourcesBody: $("sources-body"),
       logsBody: $("logs-body"),
       clustersBody: $("clusters-body"),
-      intelligenceStats: $("intelligence-stats"),
       sourceStatus: $("source-status"),
       bulkStatus: $("bulk-status"),
       bulkBody: $("bulk-body"),
       preview: $("current-preview"),
-      opsStatus: $("ops-status"),
+      overrideStatus: $("override-status"),
+      overrideRulesBody: $("override-rules-body"),
+      overrideNewsBody: $("override-news-body"),
+      overrideSavedList: $("override-saved-list"),
+      overrideNewsSearch: $("override-news-search"),
+      overrideSavedSearch: $("override-saved-search"),
+      overrideTestOutput: $("override-test-output"),
+      overrideUngroupedSummary: $("override-ungrouped-summary"),
+      overrideUngroupedList: $("override-ungrouped-list"),
+      manualForm: $("manual-news-form"),
+      manualId: $("manual-news-id"),
+      manualUrl: $("manual-url"),
+      manualTitle: $("manual-title"),
+      manualSource: $("manual-source"),
+      manualSummary: $("manual-summary"),
+      manualPublishedAt: $("manual-published-at"),
+      manualStatus: $("manual-status"),
+      manualTickers: $("manual-tickers"),
+      manualSectors: $("manual-sectors"),
+      manualAdminNote: $("manual-admin-note"),
+      manualAnalysisPreview: $("manual-analysis-preview"),
+      manualStatusLine: $("manual-status-line"),
+      manualList: $("manual-list"),
+      manualCount: $("manual-count"),
+      watcherAutoToggle: $("watcher-auto-toggle"),
+      watcherAutoStatus: $("watcher-auto-status"),
+      watcherRunningPill: $("watcher-running-pill"),
+      telegramForm: $("telegram-form"),
+      telegramId: $("telegram-id"),
+      telegramName: $("telegram-name"),
+      telegramChatId: $("telegram-chat-id"),
+      telegramActive: $("telegram-active"),
+      telegramStatus: $("telegram-status"),
+      telegramBody: $("telegram-body"),
+      telegramCount: $("telegram-count"),
+      telegramAutoToggle: $("telegram-auto-toggle"),
+      telegramAutoStatus: $("telegram-auto-status"),
     };
 
+    function configurePublicDashboardLink() {
+      const isLocalhost = ["localhost", "127.0.0.1"].includes(location.hostname);
+      if (isLocalhost && location.pathname.startsWith("/public/")) {
+        els.publicDashboardLink.href = "/public/index.html";
+      }
+    }
+
+    const WIN1252_BYTES = new Map([
+      [0x20ac, 0x80], [0x201a, 0x82], [0x0192, 0x83], [0x201e, 0x84],
+      [0x2026, 0x85], [0x2020, 0x86], [0x2021, 0x87], [0x02c6, 0x88],
+      [0x2030, 0x89], [0x0160, 0x8a], [0x2039, 0x8b], [0x0152, 0x8c],
+      [0x017d, 0x8e], [0x2018, 0x91], [0x2019, 0x92], [0x201c, 0x93],
+      [0x201d, 0x94], [0x2022, 0x95], [0x2013, 0x96], [0x2014, 0x97],
+      [0x02dc, 0x98], [0x2122, 0x99], [0x0161, 0x9a], [0x203a, 0x9b],
+      [0x0153, 0x9c], [0x017e, 0x9e], [0x0178, 0x9f],
+    ]);
+
+    function fixText(value) {
+      const text = String(value ?? "");
+      const mojibakePattern = /[\u00c2\u00c3\u00c4\u00c6]|\u00e1[\u00ba\u00bb]|\u00c2\u00b7|\u00e2[\u0080-\u009f\u20ac\u2026]/;
+      if (!mojibakePattern.test(text)) return text;
+      try {
+        const bytes = [];
+        for (const char of text) {
+          const code = char.codePointAt(0);
+          if (WIN1252_BYTES.has(code)) bytes.push(WIN1252_BYTES.get(code));
+          else if (code <= 255) bytes.push(code);
+          else return text;
+        }
+        const decoded = new TextDecoder("utf-8", {fatal: false}).decode(new Uint8Array(bytes));
+        return decoded.includes("\uFFFD") ? text : decoded;
+      } catch {
+        return text;
+      }
+    }
+
     function escapeHtml(value) {
-      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      return fixText(value).replace(/[&<>"']/g, (char) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
       })[char]);
     }
 
     function stripHtml(value) {
-      return String(value || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      return fixText(value).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    }
+
+    function shortText(value, max = 90) {
+      const text = stripHtml(value);
+      return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+    }
+
+    function unique(values) {
+      return [...new Set((values || []).filter(Boolean))];
+    }
+
+    function normalizeFinancialText(value) {
+      return fixText(value)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/Đ/g, "D")
+        .toLowerCase()
+        .replace(/[^a-z0-9%+./-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function normalizeText(value) {
+      return normalizeFinancialText(value);
+    }
+
+    function escapeRegExp(value) {
+      return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function countTerm(text, term) {
+      const source = normalizeFinancialText(text);
+      const needle = normalizeFinancialText(term);
+      if (!needle || needle.length < 2) return 0;
+      const pattern = new RegExp(`(^|[^a-z0-9])${escapeRegExp(needle)}([^a-z0-9]|$)`, "g");
+      return (source.match(pattern) || []).length;
+    }
+
+    function compactCode(value) {
+      return String(value || "").trim().toUpperCase();
+    }
+
+    function compactList(values, limit = 8) {
+      const list = (values || []).filter(Boolean).map(fixText);
+      if (!list.length) return "-";
+      return list.length > limit ? `${list.slice(0, limit).join(", ")} +${list.length - limit}` : list.join(", ");
+    }
+
+    function fixDomText(root = document.body) {
+      if (!root) return;
+      const mojibakePattern = /[\u00c2\u00c3\u00c4\u00c6]|\u00e1[\u00ba\u00bb]|\u00c2\u00b7|\u00e2[\u0080-\u009f\u20ac\u2026]/;
+      const skipTags = new Set(["SCRIPT", "STYLE", "TEXTAREA"]);
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (!parent || skipTags.has(parent.tagName)) return NodeFilter.FILTER_REJECT;
+          return mojibakePattern.test(node.nodeValue || "") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+        },
+      });
+      const textNodes = [];
+      while (walker.nextNode()) textNodes.push(walker.currentNode);
+      textNodes.forEach((node) => {
+        const fixed = fixText(node.nodeValue);
+        if (fixed !== node.nodeValue) node.nodeValue = fixed;
+      });
+      root.querySelectorAll?.("[placeholder], [title], option, input, button").forEach((el) => {
+        ["placeholder", "title", "value"].forEach((attr) => {
+          if (!el.hasAttribute?.(attr)) return;
+          const current = el.getAttribute(attr);
+          const fixed = fixText(current);
+          if (fixed !== current) el.setAttribute(attr, fixed);
+        });
+      });
+    }
+
+    function installDomTextFixer() {
+      fixDomText();
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === "characterData") {
+            const fixed = fixText(mutation.target.nodeValue);
+            if (fixed !== mutation.target.nodeValue) mutation.target.nodeValue = fixed;
+          }
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) fixDomText(node);
+            else if (node.nodeType === Node.TEXT_NODE) {
+              const fixed = fixText(node.nodeValue);
+              if (fixed !== node.nodeValue) node.nodeValue = fixed;
+            }
+          });
+          if (mutation.type === "attributes") fixDomText(mutation.target);
+        });
+      });
+      observer.observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ["placeholder", "title", "value"],
+      });
+    }
+
+    function parseTickers(value) {
+      return unique(String(value || "").split(/[,\s]+/).map((item) => item.trim().toUpperCase()).filter(Boolean));
+    }
+
+    function parseManualList(value, formatter = (item) => item) {
+      return unique(String(value || "")
+        .split(/[\s,;|/]+/)
+        .map((item) => formatter(item.trim()))
+        .filter(Boolean));
+    }
+
+    function normalizeManualUrl(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      try {
+        const url = new URL(raw);
+        url.hash = "";
+        url.hostname = url.hostname.toLowerCase();
+        return url.href.replace(/\/$/, "");
+      } catch {
+        return raw.replace(/\/$/, "");
+      }
+    }
+
+    function setOverrideSectorValue(value) {
+      const sector = String(value || "Tin khác").trim() || "Tin khác";
+      const select = $("override-sector");
+      const other = $("override-sector-other");
+      const exists = Array.from(select.options).some((option) => option.value === sector);
+      select.value = exists ? sector : "Nhóm khác";
+      other.hidden = exists;
+      other.value = exists ? "" : sector;
+    }
+
+    function getOverrideSectorValue() {
+      return $("override-sector").value === "Nhóm khác"
+        ? ($("override-sector-other").value.trim() || "Tin khác")
+        : $("override-sector").value;
     }
 
     function toDate(value) {
@@ -353,6 +1196,12 @@
     function formatTime(value) {
       const date = toDate(value);
       return date ? date.toLocaleString("vi-VN", {hour12: false}) : "-";
+    }
+
+    function toDatetimeLocalValue(value) {
+      const date = toDate(value) || new Date();
+      const pad = (number) => String(number).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
     function formatDurationMs(value) {
@@ -383,19 +1232,35 @@
       if (/24h\.com\.vn$/i.test(host)) return "parser_24h";
       if (/hsx|hose/i.test(host)) return "hose";
       if (/cafef/i.test(host)) return "cafef";
+      if (/vietstock/i.test(host) && /moi-cap-nhat/i.test(url || "")) return "vietstock_moi_cap_nhat";
       if (/vietstock/i.test(host)) return "vietstock";
       if (type === "rss") return "rss";
       return type === "category" || type === "auto" ? "generic_scored_category" : "generic";
     }
 
+    function defaultSectorFromSourceText(value) {
+      const text = normalizeText(value || "");
+      const rules = [
+        {pattern: /\b(chung[\s_-]*khoan|stocks?|hose|hsx|hnx|thi[\s_-]*truong[\s_-]*chung[\s_-]*khoan|cong[\s_-]*bo[\s_-]*tu[\s_-]*so)\b/, sector: "Chứng khoán"},
+        {pattern: /\b(tai[\s_-]*chinh|finance|financial)\b/, sector: "Tài chính"},
+        {pattern: /\b(dia[\s_-]*oc|bat[\s_-]*dong[\s_-]*san|real[\s_-]*estate)\b/, sector: "Bất động sản"},
+        {pattern: /\b(kinh[\s_-]*te[\s_-]*the[\s_-]*gioi|the[\s_-]*gioi|macro|world[\s_-]*economy)\b/, sector: "Vĩ mô"},
+        {pattern: /\b(nhip[\s_-]*cau[\s_-]*doanh[\s_-]*nghiep|doanh[\s_-]*nghiep|company|cong[\s_-]*ty)\b/, sector: "Doanh nghiệp"},
+        {pattern: /\b(dau[\s_-]*tu|thi[\s_-]*truong|market|tin[\s_-]*moi)\b/, sector: "Thị trường"},
+        {pattern: /\b(su[\s_-]*kien[\s_-]*dao[\s_-]*tao|research|phan[\s_-]*tich)\b/, sector: "Phân tích"},
+      ];
+      return (rules.find((rule) => rule.pattern.test(text)) || {}).sector || "";
+    }
+
     function sourcePayloadFromForm() {
       const url = $("source-url").value.trim();
+      const sourceText = `${$("source-name").value} ${url} ${$("source-category").value}`;
       return {
         name: $("source-name").value.trim() || hostName(url) || "Nguồn tin",
         url,
         type: $("source-type").value,
         category: $("source-category").value.trim() || "market",
-        sector: $("source-sector").value.trim() || "other",
+        sector: $("source-sector").value.trim() || defaultSectorFromSourceText(sourceText) || "other",
         priority: $("source-priority").value,
         intervalSeconds: Number($("source-interval").value || 120),
         parserType: $("source-parser").value || detectParserType(url, $("source-type").value),
@@ -776,7 +1641,7 @@
         type: result.detectedType === "category" ? "category" : "rss",
         active: true,
         category: "market",
-        sector: "other",
+        sector: defaultSectorFromSourceText(`${hostName(result.url)} ${result.url}`) || "other",
         priority: "normal",
         intervalSeconds: result.detectedType === "rss" ? 120 : null,
         parserType: result.parserType || "generic",
@@ -837,6 +1702,418 @@
         lastCheckedAt: null,
         lastNewAt: null,
         lastError: null,
+      });
+    }
+
+    function overridePayloadFromForm() {
+      const titlePattern = $("override-title-pattern").value.trim();
+      const phraseSlots = [
+        titlePattern,
+        $("override-title-pattern-2").value.trim(),
+        $("override-title-pattern-3").value.trim(),
+      ];
+      const phraseJoiners = [
+        $("override-joiner-12")?.value || "AND",
+        $("override-joiner-23")?.value || "AND",
+      ];
+      const orderedInputs = phraseSlots.filter(Boolean);
+      let phrases = orderedInputs.length
+        ? orderedInputs
+        : $("override-phrases").value.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean);
+      if (!phrases.length && titlePattern) phrases = [titlePattern];
+      return {
+        titlePattern,
+        normalizedTitlePattern: normalizeFinancialText(titlePattern),
+        phraseSlots,
+        normalizedPhraseSlots: phraseSlots.map(normalizeFinancialText),
+        phraseJoiners,
+        phrases,
+        normalizedPhrases: phrases.map(normalizeFinancialText),
+        matchMode: phrases.length > 1 ? "ordered_terms" : "contains_phrase",
+        scope: $("override-scope").value,
+        finalSector: getOverrideSectorValue(),
+        primaryTickers: parseTickers($("override-primary-tickers").value),
+        relatedStocks: parseTickers($("override-related-stocks").value),
+        watchlistStocks: parseTickers($("override-watchlist-stocks").value),
+        autoTickerMode: $("override-auto-ticker-mode")?.value || "",
+        autoTickerRegex: $("override-auto-ticker-regex")?.value.trim() || "",
+        eventType: $("override-event-type").value.trim() || "admin_override",
+        sentiment: $("override-sentiment").value || "neutral",
+        impactLevel: $("override-impact").value || "medium",
+        priority: Number($("override-priority").value || 1000),
+        active: $("override-active").checked,
+        reason: $("override-reason").value.trim() || `Admin gán mặc định: tiêu đề khớp "${titlePattern}" thì dùng nhóm/mã đã chọn.`,
+        createdFromNewsId: state.overrideSourceNewsId || "",
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+    }
+
+    function resetOverrideForm() {
+      state.editingOverrideId = null;
+      state.overrideSourceNewsId = "";
+      $("override-title-pattern").value = "";
+      $("override-title-pattern-2").value = "";
+      $("override-title-pattern-3").value = "";
+      $("override-joiner-12").value = "AND";
+      $("override-joiner-23").value = "AND";
+      $("override-phrases").value = "";
+      $("override-match-mode").value = "ordered_terms";
+      $("override-scope").value = "title";
+      setOverrideSectorValue("Tin khác");
+      $("override-primary-tickers").value = "";
+      $("override-related-stocks").value = "";
+      $("override-watchlist-stocks").value = "";
+      $("override-auto-ticker-mode").value = "";
+      $("override-auto-ticker-regex").value = "";
+      $("override-event-type").value = "";
+      $("override-sentiment").value = "neutral";
+      $("override-impact").value = "medium";
+      $("override-priority").value = "1000";
+      $("override-active").checked = true;
+      $("override-reason").value = "";
+    }
+
+    function currentGraphSector(item) {
+      const graph = item.marketGraph || item.marketIntelligence || {};
+      return fixText(item.finalSector || graph.finalSector || item.sector || graph.sector || item.category || "Tin khác");
+    }
+
+    function currentGraphTickers(item) {
+      const graph = item.marketGraph || item.marketIntelligence || {};
+      return unique([
+        ...(Array.isArray(item.finalTickers) ? item.finalTickers : []),
+        ...(Array.isArray(graph.finalTickers) ? graph.finalTickers : []),
+        ...(Array.isArray(item.primaryTickers) ? item.primaryTickers : []),
+        item.primaryTicker,
+        ...(Array.isArray(item.relatedStocks) ? item.relatedStocks : []),
+        ...(Array.isArray(graph.relatedStocks) ? graph.relatedStocks : []),
+        ...(Array.isArray(item.watchlistStocks) ? item.watchlistStocks : []),
+        ...(Array.isArray(graph.watchlistStocks) ? graph.watchlistStocks : []),
+      ].map(compactCode).filter(Boolean));
+    }
+
+    function adminOverrideMatchesNews(rule = {}, item = {}) {
+      if (!rule || rule.active === false) return false;
+      const phraseSlots = (Array.isArray(rule.normalizedPhraseSlots) && rule.normalizedPhraseSlots.length ? rule.normalizedPhraseSlots : (rule.phraseSlots || []).map(normalizeText))
+        .map((phrase) => normalizeText(phrase).replace(/\s+/g, " ").trim());
+      const phrases = (rule.normalizedPhrases && rule.normalizedPhrases.length ? rule.normalizedPhrases : (rule.phrases || [rule.titlePattern]).map(normalizeText))
+        .map((phrase) => normalizeText(phrase).replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      const target = normalizeText(rule.scope === "full_text" ? `${item.title || ""} ${item.summary || item.description || ""}` : item.title || "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!target || !phrases.length) return false;
+      if (phraseSlots.some(Boolean)) return phraseExpressionMatches(target, phraseSlots, rule.phraseJoiners || ["AND", "AND"]);
+      const mode = rule.matchMode || (phrases.length > 1 ? "ordered_terms" : "contains_phrase");
+      if (mode === "exact_title") return target === phrases[0];
+      if (mode === "starts_with") return target.startsWith(phrases[0]);
+      if (mode === "all_terms") return phrases.every((phrase) => target.includes(phrase));
+      if (mode === "ordered_terms") {
+        let from = 0;
+        return phrases.every((phrase) => {
+          const index = target.indexOf(phrase, from);
+          if (index < 0) return false;
+          from = index + phrase.length;
+          return true;
+        });
+      }
+      return phrases.some((phrase) => target.includes(phrase));
+    }
+
+    function orderedTermMatch(target, terms = []) {
+      let from = 0;
+      return terms.every((term) => {
+        const index = target.indexOf(term, from);
+        if (index < 0) return false;
+        from = index + term.length;
+        return true;
+      });
+    }
+
+    function phraseExpressionMatches(target, phraseSlots = [], joiners = []) {
+      const slots = phraseSlots.map((phrase, index) => ({phrase, index})).filter((slot) => slot.phrase);
+      if (!slots.length) return false;
+      const groups = [[]];
+      slots.forEach((slot, slotIndex) => {
+        if (slotIndex > 0) {
+          const previousOriginalIndex = slots[slotIndex - 1].index;
+          if ((joiners[previousOriginalIndex] || "AND") === "OR") groups.push([]);
+        }
+        groups[groups.length - 1].push(slot.phrase);
+      });
+      return groups.some((group) => orderedTermMatch(target, group));
+    }
+
+    function hasAdminOverrideCoverage(item) {
+      return state.adminOverrides.some((rule) => adminOverrideMatchesNews(rule, item));
+    }
+
+    function isUngroupedNews(item) {
+      if (hasAdminOverrideCoverage(item)) return false;
+      const graph = item.marketGraph || item.marketIntelligence || {};
+      const finalSector = item.finalSector || graph.finalSector || graph.primarySector || graph.sector || "";
+      const normalized = normalizeText(finalSector || item.displayAnalysisStatus || "");
+      if (!finalSector) return true;
+      return ["tin khac", "nhom khac", "other", "general", "uncategorized", "can phan tich lai"].some((word) => normalized === word || normalized.includes(word));
+    }
+
+    function renderUngroupedOverrideAlerts() {
+      if (!els.overrideUngroupedSummary || !els.overrideUngroupedList) return;
+      const items = state.news.filter(isUngroupedNews);
+      els.overrideUngroupedSummary.textContent = items.length
+        ? `Có ${items.length} tin trong 100 tin mới nhất đang là Nhóm khác/chưa có nhóm rõ. Chọn Dùng tin để tạo gán mặc định.`
+        : "Tốt: chưa thấy tin nào thuộc Nhóm khác/chưa có nhóm rõ trong 100 tin mới nhất.";
+      els.overrideUngroupedList.innerHTML = items.slice(0, 30).map((item) => `
+        <div class="override-ungrouped-item">
+          <div>
+            <strong>${escapeHtml(shortText(item.title || "", 110))}</strong>
+            <span class="meta">${escapeHtml(item.source || "")} · hiện tại: ${escapeHtml(currentGraphSector(item) || "Nhóm khác")}</span>
+          </div>
+          <button data-override-from-news="${escapeHtml(item.id)}" type="button">Dùng tin</button>
+        </div>
+      `).join("") || `<div class="empty">Không có tin cần gắn nhóm.</div>`;
+    }
+
+    function fillOverrideFromNews(item) {
+      if (!item) return;
+      state.overrideSourceNewsId = item.id || "";
+      state.editingOverrideId = null;
+      const title = stripHtml(item.title || "");
+      $("override-title-pattern").value = title;
+      $("override-title-pattern-2").value = "";
+      $("override-title-pattern-3").value = "";
+      $("override-joiner-12").value = "AND";
+      $("override-joiner-23").value = "AND";
+      $("override-phrases").value = title;
+      $("override-match-mode").value = "ordered_terms";
+      $("override-scope").value = "title";
+      setOverrideSectorValue(currentGraphSector(item));
+      $("override-related-stocks").value = currentGraphTickers(item).join(", ");
+      $("override-primary-tickers").value = "";
+      $("override-watchlist-stocks").value = "";
+      $("override-auto-ticker-mode").value = "";
+      $("override-auto-ticker-regex").value = "";
+      $("override-event-type").value = item.eventType || item.marketGraph?.eventType || "admin_override";
+      $("override-sentiment").value = item.sentiment || item.marketGraph?.sentiment || "neutral";
+      $("override-impact").value = item.impactLevel || item.marketGraph?.impactLevel || "medium";
+      $("override-priority").value = "1000";
+      $("override-active").checked = true;
+      $("override-reason").value = `Admin gán mặc định từ tin thật: ${title}`;
+      els.overrideStatus.textContent = "Đã đưa tin vào form. Chỉnh nhóm/mã rồi bấm Lưu gán mặc định.";
+      renderOverrideNewsList();
+      renderUngroupedOverrideAlerts();
+      window.scrollTo({top: $("override-title-pattern").getBoundingClientRect().top + window.scrollY - 90, behavior: "smooth"});
+    }
+
+    function applyOverrideToForm(rule) {
+      state.editingOverrideId = rule.id || null;
+      state.overrideSourceNewsId = rule.createdFromNewsId || "";
+      const phrases = Array.isArray(rule.phrases) ? rule.phrases : [];
+      const phraseSlots = Array.isArray(rule.phraseSlots) && rule.phraseSlots.length ? rule.phraseSlots : [rule.titlePattern || phrases[0] || "", phrases[1] || "", phrases[2] || ""];
+      const phraseJoiners = Array.isArray(rule.phraseJoiners) ? rule.phraseJoiners : ["AND", "AND"];
+      $("override-title-pattern").value = fixText(phraseSlots[0] || "");
+      $("override-title-pattern-2").value = fixText(phraseSlots[1] || "");
+      $("override-title-pattern-3").value = fixText(phraseSlots[2] || "");
+      $("override-joiner-12").value = phraseJoiners[0] === "OR" ? "OR" : "AND";
+      $("override-joiner-23").value = phraseJoiners[1] === "OR" ? "OR" : "AND";
+      $("override-phrases").value = (rule.phrases || []).map(fixText).join("\n");
+      $("override-match-mode").value = rule.matchMode || "contains_phrase";
+      $("override-scope").value = rule.scope || "title";
+      setOverrideSectorValue(fixText(rule.finalSector || "Tin khác"));
+      $("override-primary-tickers").value = (rule.primaryTickers || []).join(", ");
+      $("override-related-stocks").value = (rule.relatedStocks || rule.tickers || []).join(", ");
+      $("override-watchlist-stocks").value = (rule.watchlistStocks || []).join(", ");
+      $("override-auto-ticker-mode").value = rule.autoTickerMode || "";
+      $("override-auto-ticker-regex").value = rule.autoTickerRegex || "";
+      $("override-event-type").value = rule.eventType || "";
+      $("override-sentiment").value = rule.sentiment || "neutral";
+      $("override-impact").value = rule.impactLevel || "medium";
+      $("override-priority").value = rule.priority || 1000;
+      $("override-active").checked = rule.active !== false;
+      $("override-reason").value = fixText(rule.reason || rule.reasonTemplate || "");
+    }
+
+    async function saveAdminOverride() {
+      const payload = overridePayloadFromForm();
+      if (!payload.titlePattern && !payload.phrases.length) throw new Error("Thiếu mẫu title/cụm từ");
+      if (!payload.finalSector) throw new Error("Thiếu nhóm cần gán");
+      if (state.editingOverrideId) {
+        await db.collection("market_admin_overrides").doc(state.editingOverrideId).set(payload, {merge: true});
+      } else {
+        await db.collection("market_admin_overrides").add({
+          ...payload,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+      resetOverrideForm();
+      await loadAdminOverrides();
+    }
+
+    function cacheAdminOverrides() {
+      const activeRules = state.adminOverrides.filter((rule) => rule.active !== false);
+      localStorage.setItem("new24h_market_admin_overrides", JSON.stringify(activeRules));
+    }
+
+    async function loadAdminOverrides() {
+      const snap = await db.collection("market_admin_overrides").orderBy("priority", "desc").limit(500).get();
+      state.adminOverrides = snap.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+      cacheAdminOverrides();
+      renderAdminOverrides();
+      els.overrideStatus.textContent = `Đã tải ${state.adminOverrides.length} admin overrides.`;
+    }
+
+    function renderOverrideNewsList() {
+      if (!els.overrideNewsBody) return;
+      const query = normalizeText(state.overrideNewsSearch || "");
+      const filteredNews = state.news.filter((item) => {
+        if (!query) return true;
+        return normalizeText(`${item.title || ""} ${item.source || ""} ${currentGraphSector(item)} ${compactList(currentGraphTickers(item), 8)}`).includes(query);
+      });
+      els.overrideNewsBody.innerHTML = filteredNews.slice(0, 100).map((item) => {
+        const selected = state.overrideSourceNewsId && item.id === state.overrideSourceNewsId;
+        return `
+        <tr class="${selected ? "override-news-selected" : ""}">
+          <td><button data-override-from-news="${escapeHtml(item.id)}" type="button">Dùng tin</button></td>
+          <td><strong>${escapeHtml(shortText(item.title || "", 92))}</strong><br><span class="meta">${escapeHtml(item.source || "")}</span></td>
+          <td>${escapeHtml(currentGraphSector(item))}<br><span class="meta">${escapeHtml(compactList(currentGraphTickers(item), 5))}</span></td>
+        </tr>
+      `;
+      }).join("") || `<tr><td colspan="3" class="empty">${query ? "Không tìm thấy tin phù hợp." : "Chưa có tin mới."}</td></tr>`;
+    }
+
+    function renderAdminOverrides() {
+      if (els.overrideSavedList) {
+        const query = normalizeText(state.overrideSavedSearch || "");
+        const filteredRules = state.adminOverrides.filter((rule) => {
+          if (!query) return true;
+          const phrases = (rule.phrases || [rule.titlePattern]).filter(Boolean);
+          const tickers = unique([...(rule.primaryTickers || []), ...(rule.relatedStocks || rule.tickers || []), ...(rule.watchlistStocks || [])]);
+          return normalizeText(`${phrases.join(" ")} ${rule.finalSector || ""} ${tickers.join(" ")} ${rule.autoTickerMode || ""} ${rule.autoTickerRegex || ""} ${rule.matchMode || ""} ${rule.active === false ? "off inactive tat" : "active bat"}`).includes(query);
+        });
+        els.overrideSavedList.innerHTML = filteredRules.map((rule) => {
+          const phrases = (rule.phrases || [rule.titlePattern]).filter(Boolean);
+          const tickers = unique([...(rule.primaryTickers || []), ...(rule.relatedStocks || rule.tickers || []), ...(rule.watchlistStocks || [])]);
+          return `
+            <div class="override-saved-card">
+              <strong>${escapeHtml(compactList(phrases, 3))}</strong>
+              <div class="override-saved-meta">
+                <span class="pill">${escapeHtml(rule.finalSector || "Tin khác")}</span>
+                <span>Mã: ${escapeHtml(compactList(tickers, 8))}</span>
+                ${rule.autoTickerMode ? `<span>Auto: ${escapeHtml(rule.autoTickerMode)}</span>` : ""}
+                <span>Mode: ${escapeHtml(rule.matchMode || "contains_phrase")}</span>
+                <span class="pill ${rule.active === false ? "fail" : "ok"}">${rule.active === false ? "off" : "active"}</span>
+              </div>
+              <div class="compact-actions">
+                <button data-override-edit="${escapeHtml(rule.id)}" type="button">Sửa</button>
+                <button data-override-toggle="${escapeHtml(rule.id)}" type="button">${rule.active === false ? "Bật" : "Tắt"}</button>
+              </div>
+            </div>
+          `;
+        }).join("") || `<div class="empty">${query ? "Không tìm thấy gán phù hợp." : "Chưa có gán nào được lưu."}</div>`;
+      }
+      renderUngroupedOverrideAlerts();
+      if (!els.overrideRulesBody) return;
+      els.overrideRulesBody.innerHTML = state.adminOverrides.map((rule) => `
+        <tr>
+          <td>${escapeHtml(shortText(rule.titlePattern || compactList(rule.phrases || [], 3), 70))}</td>
+          <td>${escapeHtml(rule.matchMode || "contains_phrase")}</td>
+          <td>${escapeHtml(rule.finalSector || "-")}</td>
+          <td>${escapeHtml(compactList([...(rule.primaryTickers || []), ...(rule.relatedStocks || rule.tickers || []), ...(rule.watchlistStocks || [])], 6))}</td>
+          <td><span class="pill ${rule.active === false ? "fail" : "ok"}">${rule.active === false ? "off" : "active"}</span></td>
+          <td class="actions-cell"><div class="compact-actions">
+            <button data-override-edit="${escapeHtml(rule.id)}" type="button">Sửa</button>
+            <button data-override-toggle="${escapeHtml(rule.id)}" type="button">${rule.active === false ? "Bật" : "Tắt"}</button>
+          </div></td>
+        </tr>
+      `).join("") || `<tr><td colspan="6" class="empty">Chưa có admin override.</td></tr>`;
+    }
+
+    function testAdminOverride() {
+      const title = [
+        $("override-title-pattern").value.trim(),
+        $("override-title-pattern-2").value.trim(),
+        $("override-title-pattern-3").value.trim(),
+      ].filter(Boolean).join(" ... ") || $("override-phrases").value.split(/\r?\n/)[0] || "";
+      const draft = {...overridePayloadFromForm(), id: "draft_override"};
+      const matched = adminOverrideMatchesNews(draft, {title, summary: title});
+      els.overrideTestOutput.textContent = JSON.stringify({
+        matched,
+        sector: draft.finalSector,
+        relatedStocks: draft.relatedStocks || draft.tickers || [],
+        autoTickerMode: draft.autoTickerMode || "",
+        autoTickerRegex: draft.autoTickerRegex || "",
+        phraseSlots: draft.phraseSlots || [],
+        phraseJoiners: draft.phraseJoiners || [],
+        matchMode: draft.matchMode,
+      }, null, 2);
+      cacheAdminOverrides();
+    }
+
+    function applyWarrantOverridePreset() {
+      state.editingOverrideId = null;
+      state.overrideSourceNewsId = "";
+      $("override-title-pattern").value = "chung quyen";
+      $("override-title-pattern-2").value = "";
+      $("override-title-pattern-3").value = "";
+      $("override-joiner-12").value = "AND";
+      $("override-joiner-23").value = "AND";
+      $("override-phrases").value = "chung quyen";
+      $("override-match-mode").value = "contains_phrase";
+      $("override-scope").value = "title";
+      setOverrideSectorValue("Chứng khoán");
+      $("override-related-stocks").value = "";
+      $("override-primary-tickers").value = "";
+      $("override-watchlist-stocks").value = "";
+      $("override-auto-ticker-mode").value = "warrant_underlying";
+      $("override-auto-ticker-regex").value = "";
+      $("override-event-type").value = "admin_auto_pattern";
+      $("override-sentiment").value = "neutral";
+      $("override-impact").value = "medium";
+      $("override-priority").value = "1200";
+      $("override-active").checked = true;
+      $("override-reason").value = "Mẫu chứng quyền: có chữ chứng quyền thì tự lấy mã cơ sở trong tiêu đề.";
+      els.overrideStatus.textContent = "Đã nạp mẫu chứng quyền + mã. Có thể đổi cụm này thành bất kỳ từ khóa nào, rồi bấm Lưu gán mặc định.";
+      testAdminOverride();
+    }
+
+    function enhanceCollapsiblePanels() {
+      document.querySelectorAll("#app > .panel").forEach((panel, index) => {
+        if (panel.dataset.collapsibleReady === "true") return;
+        const heading = panel.querySelector(":scope > h2");
+        if (!heading) return;
+        const title = heading.textContent.trim();
+        const body = document.createElement("div");
+        body.className = "panel-body";
+        let node = heading.nextSibling;
+        while (node) {
+          const next = node.nextSibling;
+          body.appendChild(node);
+          node = next;
+        }
+        const header = document.createElement("div");
+        header.className = "panel-heading";
+        const button = document.createElement("button");
+        button.className = "panel-toggle";
+        button.type = "button";
+        button.setAttribute("aria-label", `Thu/mở ${title}`);
+        const storageKey = `new24h_news_ops_panel_open_${index}`;
+        const defaultOpen = /Source Manager|Admin gán nhanh/i.test(title);
+        const stored = localStorage.getItem(storageKey);
+        const setOpen = (open) => {
+          panel.classList.toggle("is-collapsed", !open);
+          button.textContent = open ? "Thu" : "Mở";
+          button.setAttribute("aria-expanded", String(open));
+          localStorage.setItem(storageKey, open ? "1" : "0");
+        };
+        panel.dataset.collapsibleReady = "true";
+        header.appendChild(heading);
+        header.appendChild(button);
+        panel.appendChild(header);
+        panel.appendChild(body);
+        setOpen(stored === null ? defaultOpen : stored === "1");
+        button.addEventListener("click", () => {
+          setOpen(panel.classList.contains("is-collapsed"));
+        });
       });
     }
 
@@ -926,21 +2203,11 @@
           <td>${escapeHtml(source.intervalSeconds || "-")}</td>
           <td>${escapeHtml(source.parserType || "generic")}</td>
           <td>${escapeHtml(source.allowCrawl === false ? "false" : "true")}</td>
-          <td>${escapeHtml(formatDurationMs(source.lastIntervalMs))}</td>
           <td>${escapeHtml(formatTime(source.nextFetchAt || source.nextCheckAt))}</td>
-          <td>${source.fingerprintChanged === true ? "true" : source.fingerprintChanged === false ? "false" : "-"}</td>
-          <td>${escapeHtml(source.newItemsFound || 0)}</td>
           <td>${escapeHtml(formatTime(source.lastCheckedAt))}</td>
           <td>${escapeHtml(formatTime(source.lastNewAt))}</td>
           <td><span class="pill ${source.domainStatus === "OK" ? "ok" : source.domainStatus === "FAIL" ? "fail" : "warn"}">${escapeHtml(source.domainStatus || (source.active === false ? "DISABLED" : "OK"))}</span></td>
           <td>${escapeHtml(source.consecutiveErrors || 0)}</td>
-          <td>${escapeHtml(source.lastHttpStatus || "-")}</td>
-          <td>${escapeHtml(source.blockedReason || "-")}</td>
-          <td>${source.parserQuality !== null && source.parserQuality !== undefined ? `${escapeHtml(qualityPercent(source.parserQuality))}%` : "-"}</td>
-          <td>${source.lastError ? `<span class="pill fail">${escapeHtml(source.lastError)}</span>` : ""}</td>
-          <td>${escapeHtml(source.totalChecked || 0)}</td>
-          <td>${escapeHtml(source.totalSaved || 0)}</td>
-          <td>${escapeHtml(source.totalDuplicate || source.duplicateCount || 0)}</td>
           <td class="actions-cell">
             <div class="compact-actions">
               <button data-edit="${escapeHtml(source.id)}">Edit</button>
@@ -951,9 +2218,168 @@
             </div>
           </td>
         </tr>
-      `).join("") || `<tr><td colspan="15" class="empty">Chưa có nguồn trong watch_sources.</td></tr>`;
+      `).join("") || `<tr><td colspan="14" class="empty">Chua co nguon trong watch_sources.</td></tr>`;
       renderStats();
       renderLogs();
+    }
+
+    function resetTelegramForm() {
+      state.editingTelegramId = null;
+      els.telegramId.value = "";
+      els.telegramName.value = "";
+      els.telegramChatId.value = "";
+      els.telegramActive.checked = true;
+      $("telegram-save").textContent = "Lưu nhóm";
+    }
+
+    function fillTelegramForm(group = {}) {
+      state.editingTelegramId = group.id || null;
+      els.telegramId.value = group.id || "";
+      els.telegramName.value = group.name || "";
+      els.telegramChatId.value = group.chatId || "";
+      els.telegramActive.checked = group.active !== false;
+      $("telegram-save").textContent = group.id ? "Cập nhật nhóm" : "Lưu nhóm";
+      els.telegramStatus.textContent = group.id ? `Đang sửa ${group.name || group.id}` : "";
+    }
+
+    async function saveTelegramGroup(event) {
+      event.preventDefault();
+      const now = firebase.firestore.FieldValue.serverTimestamp();
+      const payload = {
+        name: els.telegramName.value.trim(),
+        chatId: els.telegramChatId.value.trim(),
+        active: els.telegramActive.checked,
+        updatedAt: now,
+      };
+      if (!payload.name || !payload.chatId) {
+        els.telegramStatus.textContent = "Nhập tên nhóm và chat_id.";
+        return;
+      }
+      if (state.editingTelegramId) {
+        await db.collection("telegram_groups").doc(state.editingTelegramId).set(payload, {merge: true});
+        els.telegramStatus.textContent = "Đã cập nhật nhóm Telegram.";
+      } else {
+        await db.collection("telegram_groups").add({...payload, createdAt: now});
+        els.telegramStatus.textContent = "Đã thêm nhóm Telegram.";
+      }
+      resetTelegramForm();
+    }
+
+    function renderTelegramGroups() {
+      els.telegramCount.textContent = `${state.telegramGroups.length} nhóm`;
+      els.telegramBody.innerHTML = state.telegramGroups.map((group) => `
+        <tr>
+          <td><strong>${escapeHtml(group.name || "Nhóm Telegram")}</strong></td>
+          <td class="telegram-chat-id">${escapeHtml(group.chatId || "")}</td>
+          <td><span class="pill ${group.active !== false ? "ok" : "warn"}">${group.active !== false ? "on" : "off"}</span></td>
+          <td>${escapeHtml(formatTime(group.updatedAt || group.createdAt))}</td>
+          <td class="actions-cell">
+            <div class="compact-actions">
+              <button data-telegram-edit="${escapeHtml(group.id)}">Edit</button>
+              <button data-telegram-toggle="${escapeHtml(group.id)}" data-active="${group.active === false ? "true" : "false"}">${group.active === false ? "Enable" : "Disable"}</button>
+              <button class="danger" data-telegram-delete="${escapeHtml(group.id)}">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join("") || `<tr><td colspan="5" class="empty">Chưa có nhóm Telegram.</td></tr>`;
+    }
+
+    function renderWatcherAuto() {
+      els.watcherAutoToggle.textContent = `Tải tin tự động: ${state.watcherAutoEnabled ? "ON" : "OFF"}`;
+      els.watcherAutoToggle.classList.toggle("good", state.watcherAutoEnabled);
+      els.watcherRunningPill.textContent = state.watcherRunning ? "running" : "stopped";
+      els.watcherRunningPill.className = `pill ${state.watcherRunning ? "ok" : "warn"}`;
+      els.watcherAutoStatus.textContent = state.watcherAutoEnabled
+        ? "Local watcher đang bật. Hệ thống tự quét và tải tin mới."
+        : "Local watcher đang tắt.";
+    }
+
+    async function callWatcherControl(enabled) {
+      const body = typeof enabled === "boolean" ? {enabled} : {};
+      const response = await fetch("http://localhost:8787/watcher-control", {
+        method: "POST",
+        headers: {"content-type": "application/json"},
+        body: JSON.stringify(body),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.error || `Local server HTTP ${response.status}`);
+      }
+      state.watcherAutoEnabled = result.watcher?.enabled === true;
+      state.watcherRunning = result.watcher?.running === true;
+      renderWatcherAuto();
+    }
+
+    function renderTelegramAutoPush() {
+      els.telegramAutoToggle.textContent = `Auto Push Telegram: ${state.telegramAutoPushEnabled ? "ON" : "OFF"}`;
+      els.telegramAutoToggle.classList.toggle("good", state.telegramAutoPushEnabled);
+      els.telegramAutoStatus.textContent = state.telegramAutoPushEnabled
+        ? "Auto push đang bật. Dashboard admin sẽ gửi tin phù hợp sang local Telegram server."
+        : "Auto push đang tắt.";
+    }
+
+    async function toggleTelegramAutoPush() {
+      const enabled = !state.telegramAutoPushEnabled;
+      await db.collection("telegram_settings").doc("auto_push").set({
+        enabled,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy: currentAdminUser?.email || "news-ops-admin",
+      }, {merge: true});
+      state.telegramAutoPushEnabled = enabled;
+      renderTelegramAutoPush();
+      if (enabled) await maybeRunTelegramAutoPush(true);
+    }
+
+    function autoPushNewsPayload(item = {}) {
+      return {
+        newsId: item.id,
+        title: item.titleVi || item.translatedTitle || item.title || item.titleOriginal || "",
+        link: item.publicUrl || item.displayUrl || item.link || item.url || item.originalUrl || item.canonicalUrl || "",
+        summary: item.summaryVi || item.translatedSummary || item.summary || item.shortDescription || item.description || "",
+        source: item.source || item.sourceName || item.originalSource || "",
+        sourceName: item.sourceName || item.source || item.originalSource || "",
+        sector: item.sector || item.finalSector || item.category || "",
+        finalSector: item.finalSector || "",
+        category: item.category || "",
+        categoryGroup: item.categoryGroup || "",
+        eventType: item.eventType || item.newsType || "",
+        newsType: item.newsType || "",
+        impactLevel: item.impactLevel || item.priorityLabel || item.priority || "",
+        priorityLabel: item.priorityLabel || "",
+        impactScore: item.impactScore || item.finalScore || item.score || 0,
+        finalScore: item.finalScore || 0,
+        relatedStocks: Array.isArray(item.relatedStocks) ? item.relatedStocks : [],
+        primaryTickers: Array.isArray(item.primaryTickers) ? item.primaryTickers : [],
+        tickers: Array.isArray(item.tickers) ? item.tickers : [],
+        watchlistStocks: Array.isArray(item.watchlistStocks) ? item.watchlistStocks : [],
+      };
+    }
+
+    async function maybeRunTelegramAutoPush(force = false) {
+      if (!state.telegramAutoPushEnabled || state.telegramAutoPushInFlight || !state.news.length) return;
+      if (!force && Date.now() - state.telegramAutoPushLastRunAt < 120000) return;
+      state.telegramAutoPushInFlight = true;
+      state.telegramAutoPushLastRunAt = Date.now();
+      els.telegramAutoStatus.textContent = `Auto push đang quét ${state.news.length} tin...`;
+      try {
+        const response = await fetch("http://localhost:8787/auto-push-telegram", {
+          method: "POST",
+          headers: {"content-type": "application/json"},
+          body: JSON.stringify({
+            enabled: true,
+            items: state.news.slice(0, 100).map(autoPushNewsPayload),
+          }),
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `Local server HTTP ${response.status}`);
+        const pushedCount = Array.isArray(result.pushed) ? result.pushed.length : 0;
+        const skippedCount = Array.isArray(result.skipped) ? result.skipped.length : 0;
+        els.telegramAutoStatus.textContent = `Auto push ON. Quét ${state.news.length} tin, đẩy ${pushedCount}, bỏ qua ${skippedCount}.`;
+      } catch (error) {
+        els.telegramAutoStatus.textContent = `Auto push ON nhưng local server lỗi: ${error.message || error}`;
+      } finally {
+        state.telegramAutoPushInFlight = false;
+      }
     }
 
     function renderStats() {
@@ -1004,26 +2430,7 @@
         .sort((a, b) => Number(b.duplicateCount || 1) - Number(a.duplicateCount || 1))
         .slice(0, 30);
 
-      state.news.forEach((item) => {
-        const sector = item.sector || "other";
-        sectorMap.set(sector, (sectorMap.get(sector) || 0) + Number(item.impactScore || 0));
-        (Array.isArray(item.relatedStocks) ? item.relatedStocks : []).forEach((ticker) => {
-          tickerMap.set(ticker, (tickerMap.get(ticker) || 0) + 1);
-        });
-        (Array.isArray(item.keywords) ? item.keywords : []).forEach((keyword) => {
-          keywordMap.set(keyword, (keywordMap.get(keyword) || 0) + 1);
-        });
-      });
-
-      const top = (map) => Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8)
-        .map(([key, value]) => `${key} (${Math.round(value)})`).join(" · ") || "-";
-      els.intelligenceStats.innerHTML = `
-        <div class="stat"><span>Top sectors</span><strong>${escapeHtml(top(sectorMap))}</strong></div>
-        <div class="stat"><span>Top tickers</span><strong>${escapeHtml(top(tickerMap))}</strong></div>
-        <div class="stat"><span>Hot keywords</span><strong>${escapeHtml(top(keywordMap))}</strong></div>
-      `;
-
-      els.clustersBody.innerHTML = clusters.map((item) => `
+      if (els.clustersBody) els.clustersBody.innerHTML = clusters.map((item) => `
         <tr>
           <td class="url">${escapeHtml(item.clusterId || "-")}</td>
           <td>${escapeHtml(item.duplicateCount || 1)}</td>
@@ -1032,6 +2439,231 @@
           <td>${escapeHtml(item.impactScore || item.finalScore || 0)}</td>
         </tr>
       `).join("") || `<tr><td colspan="5" class="empty">Chưa có cụm duplicate trong 100 tin mới nhất.</td></tr>`;
+      renderOverrideNewsList();
+      renderUngroupedOverrideAlerts();
+    }
+
+    function mapManualImpactLevel(value) {
+      const raw = String(value || "").toLowerCase();
+      if (["high", "hot"].includes(raw)) return "high";
+      if (["low", "noise"].includes(raw)) return "low";
+      return "normal";
+    }
+
+    function analyzeManualNewsForm() {
+      const manualTickers = parseManualList(els.manualTickers.value, compactCode).filter((code) => /^[A-Z0-9]{2,10}$/.test(code)).slice(0, 20);
+      const manualSectors = parseManualList(els.manualSectors.value).slice(0, 20);
+      const item = {
+        title: els.manualTitle.value.trim(),
+        summary: els.manualSummary.value.trim(),
+        content: els.manualSummary.value.trim(),
+        source: els.manualSource.value.trim() || "Manual",
+        sourceCategory: "manual",
+        category: "manual",
+      };
+      const primaryTickers = manualTickers.slice(0, 2);
+      const relatedStocks = manualTickers.slice(2)
+        .filter((code) => !primaryTickers.includes(code))
+        .slice(0, 8);
+      const watchlistStocks = [];
+      const sectors = manualSectors.slice(0, 20);
+      const analysis = {
+        graph: {},
+        primaryTickers,
+        relatedStocks,
+        watchlistStocks,
+        tickers: unique([...manualTickers, ...primaryTickers, ...relatedStocks, ...watchlistStocks]).slice(0, 20),
+        sectors,
+        eventType: "",
+        sentiment: "neutral",
+        impactLevel: "normal",
+        horizon: "",
+        confidence: manualTickers.length || manualSectors.length ? 80 : 0,
+        matchedBy: ["manual_admin"],
+        reason: item.title || "",
+      };
+      els.manualAnalysisPreview.innerHTML = `
+        Event ${escapeHtml(analysis.eventType || "-")} ·
+        Sentiment ${escapeHtml(analysis.sentiment)} ·
+        Impact ${escapeHtml(analysis.impactLevel)} ·
+        Mã ${escapeHtml(compactList(analysis.tickers, 12))} ·
+        Ngành ${escapeHtml(compactList(analysis.sectors, 8))}
+      `;
+      return analysis;
+    }
+
+    function manualPayloadFromForm() {
+      const url = normalizeManualUrl(els.manualUrl.value);
+      const publishedAt = els.manualPublishedAt.value ? new Date(els.manualPublishedAt.value) : new Date();
+      const analysis = analyzeManualNewsForm();
+      return {
+        url,
+        title: els.manualTitle.value.trim(),
+        source: els.manualSource.value.trim(),
+        sourceName: els.manualSource.value.trim(),
+        publishedAt: firebase.firestore.Timestamp.fromDate(Number.isNaN(publishedAt.getTime()) ? new Date() : publishedAt),
+        summary: els.manualSummary.value.trim(),
+        content: els.manualSummary.value.trim(),
+        contentText: els.manualSummary.value.trim(),
+        tickers: analysis.tickers,
+        sectors: analysis.sectors,
+        primaryTickers: analysis.primaryTickers,
+        relatedStocks: analysis.relatedStocks,
+        watchlistStocks: analysis.watchlistStocks,
+        tickerDetails: Array.isArray(analysis.graph?.tickerDetails) ? analysis.graph.tickerDetails : [],
+        eventType: analysis.eventType,
+        sentiment: analysis.sentiment,
+        impactLevel: analysis.impactLevel,
+        horizon: analysis.horizon,
+        confidence: analysis.confidence || 0,
+        matchedBy: analysis.matchedBy,
+        reason: analysis.reason,
+        adminNote: els.manualAdminNote.value.trim(),
+        status: els.manualStatus.value || "published",
+        isManual: true,
+        uiBadge: "Thủ công",
+        category: "manual",
+        group: "domestic",
+        sourceUrl: url,
+        link: url,
+        originalUrl: url,
+        canonicalUrl: url,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+    }
+
+    async function manualDuplicateExists(url, currentId = "") {
+      const normalized = normalizeManualUrl(url);
+      if (!normalized) return false;
+      const manualSnap = await db.collection("manual_news").where("url", "==", normalized).limit(2).get();
+      if (manualSnap.docs.some((doc) => doc.id !== currentId)) return true;
+      const fields = ["url", "canonicalUrl", "originalUrl", "link"];
+      const checks = await Promise.all(fields.map((field) => db.collection("news").where(field, "==", normalized).limit(1).get().catch(() => ({empty: true}))));
+      return checks.some((snap) => !snap.empty);
+    }
+
+    async function fetchManualMeta() {
+      const url = normalizeManualUrl(els.manualUrl.value);
+      if (!url) {
+        els.manualStatusLine.textContent = "Dán link trước.";
+        return;
+      }
+      els.manualStatusLine.textContent = "Đang lấy thông tin bài viết...";
+      const candidates = [
+        url,
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      ];
+      let lastError = null;
+      for (const candidate of candidates) {
+        try {
+          const response = await fetch(candidate, {cache: "no-store", credentials: "omit"});
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const html = await response.text();
+          const doc = new DOMParser().parseFromString(html, "text/html");
+          const meta = (selector) => doc.querySelector(selector)?.getAttribute("content")?.trim() || "";
+          const title = meta("meta[property='og:title']") || doc.querySelector("title")?.textContent?.trim() || "";
+          const summary = meta("meta[property='og:description']") || meta("meta[name='description']") || "";
+          const source = meta("meta[property='og:site_name']") || hostName(url);
+          if (title && !els.manualTitle.value.trim()) els.manualTitle.value = title;
+          if (summary && !els.manualSummary.value.trim()) els.manualSummary.value = summary;
+          if (source && !els.manualSource.value.trim()) els.manualSource.value = source;
+          analyzeManualNewsForm();
+          els.manualStatusLine.textContent = "Đã lấy thông tin. Kiểm tra nhanh rồi lưu.";
+          return;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      els.manualStatusLine.textContent = `Không lấy được thông tin: ${lastError?.message || lastError}. Có thể nhập tay.`;
+    }
+
+    async function saveManualNews(event) {
+      event.preventDefault();
+      if (event.submitter?.id === "manual-save") els.manualStatus.value = "published";
+      if (els.manualUrl.value.trim() && (!els.manualTitle.value.trim() || !els.manualSource.value.trim())) {
+        await fetchManualMeta().catch(() => {});
+      }
+      const currentId = els.manualId.value.trim();
+      const payload = manualPayloadFromForm();
+      if (!payload.url || !payload.title || !payload.source) {
+        els.manualStatusLine.textContent = "Cần link, tiêu đề và nguồn. Nếu tự lấy không được thì nhập tay 2 ô đó.";
+        return;
+      }
+      if (await manualDuplicateExists(payload.url, currentId)) {
+        els.manualStatusLine.textContent = "Tin này đã có";
+        return;
+      }
+      if (currentId) {
+        await db.collection("manual_news").doc(currentId).set(payload, {merge: true});
+        els.manualStatusLine.textContent = "Đã cập nhật tin thủ công.";
+      } else {
+        const docRef = await db.collection("manual_news").add({
+          ...payload,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdBy: currentAdminUser?.email || "news-ops-admin",
+        });
+        els.manualId.value = docRef.id;
+        els.manualStatusLine.textContent = "Đã lưu tin thủ công.";
+      }
+    }
+
+    function resetManualForm() {
+      els.manualForm.reset();
+      els.manualId.value = "";
+      els.manualStatus.value = "published";
+      els.manualPublishedAt.value = toDatetimeLocalValue(new Date());
+      els.manualAnalysisPreview.textContent = "Chưa phân tích.";
+      els.manualStatusLine.textContent = "";
+    }
+
+    function fillManualForm(item = {}) {
+      els.manualId.value = item.id || "";
+      els.manualUrl.value = item.url || item.sourceUrl || item.link || "";
+      els.manualTitle.value = item.title || "";
+      els.manualSource.value = item.source || item.sourceName || "";
+      els.manualSummary.value = item.summary || item.content || "";
+      els.manualPublishedAt.value = toDatetimeLocalValue(item.publishedAt || item.createdAt);
+      els.manualStatus.value = item.status || "draft";
+      els.manualTickers.value = (item.tickers || item.primaryTickers || []).join(", ");
+      els.manualSectors.value = (item.sectors || []).join(", ");
+      els.manualAdminNote.value = item.adminNote || "";
+      analyzeManualNewsForm();
+      els.manualUrl.focus();
+    }
+
+    function renderManualNews() {
+      const items = state.manualNews.slice().sort((a, b) => (toDate(b.publishedAt)?.getTime() || 0) - (toDate(a.publishedAt)?.getTime() || 0));
+      els.manualCount.textContent = `${items.length} tin`;
+      els.manualList.innerHTML = items.length ? items.map((item) => `
+        <div class="manual-card">
+          <strong>${escapeHtml(item.title || "Không có tiêu đề")}</strong>
+          <div class="manual-card-meta">
+            <span>${escapeHtml(item.source || item.sourceName || "Manual")}</span>
+            <span class="pill ${item.status === "published" ? "ok" : item.status === "hidden" ? "fail" : "warn"}">${escapeHtml(item.status || "draft")}</span>
+            <span>${escapeHtml(formatTime(item.publishedAt || item.createdAt))}</span>
+            <span>${escapeHtml(compactList(item.tickers || item.primaryTickers || [], 6))}</span>
+          </div>
+          <div class="manual-card-actions">
+            <button data-manual-edit="${escapeHtml(item.id)}" type="button">Sửa</button>
+            <button data-manual-status="${escapeHtml(item.id)}" data-status="published" type="button">Publish</button>
+            <button data-manual-status="${escapeHtml(item.id)}" data-status="hidden" type="button">Ẩn</button>
+            <button data-manual-delete="${escapeHtml(item.id)}" type="button">Xóa</button>
+          </div>
+        </div>
+      `).join("") : `<div class="empty">Chưa có tin thủ công.</div>`;
+    }
+
+    async function updateManualStatus(id, status) {
+      await db.collection("manual_news").doc(id).set({
+        status,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      }, {merge: true});
+    }
+
+    async function deleteManualNews(id) {
+      if (!confirm("Xóa tin thủ công này?")) return;
+      await db.collection("manual_news").doc(id).delete();
+      if (els.manualId.value === id) resetManualForm();
     }
 
     async function requestOp(type) {
@@ -1054,6 +2686,60 @@
     }
 
     function bindEvents() {
+      els.watcherAutoToggle.addEventListener("click", () => {
+        callWatcherControl(!state.watcherAutoEnabled).catch((error) => {
+          els.watcherAutoStatus.textContent = `Không đổi được tải tin tự động: ${error.message || error}. Kiểm tra npm run telegram-server.`;
+        });
+      });
+      els.telegramAutoToggle.addEventListener("click", () => toggleTelegramAutoPush().catch((error) => {
+        els.telegramAutoStatus.textContent = `Không đổi được Auto Push: ${error.message || error}`;
+      }));
+      els.telegramForm.addEventListener("submit", (event) => saveTelegramGroup(event).catch((error) => {
+        els.telegramStatus.textContent = `Không lưu được nhóm Telegram: ${error.message || error}`;
+      }));
+      $("telegram-reset").addEventListener("click", resetTelegramForm);
+      els.telegramBody.addEventListener("click", async (event) => {
+        const edit = event.target.closest("[data-telegram-edit]");
+        if (edit) fillTelegramForm(state.telegramGroups.find((item) => item.id === edit.dataset.telegramEdit) || {});
+        const toggle = event.target.closest("[data-telegram-toggle]");
+        if (toggle) await db.collection("telegram_groups").doc(toggle.dataset.telegramToggle).set({
+          active: toggle.dataset.active === "true",
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, {merge: true});
+        const remove = event.target.closest("[data-telegram-delete]");
+        if (remove && confirm("Xóa nhóm Telegram này?")) {
+          await db.collection("telegram_groups").doc(remove.dataset.telegramDelete).delete();
+          if (state.editingTelegramId === remove.dataset.telegramDelete) resetTelegramForm();
+        }
+      });
+      els.manualForm.addEventListener("submit", (event) => saveManualNews(event).catch((error) => {
+        els.manualStatusLine.textContent = `Không lưu được tin: ${error.message || error}`;
+      }));
+      $("manual-save-draft").addEventListener("click", () => {
+        els.manualStatus.value = "draft";
+        els.manualForm.requestSubmit();
+      });
+      $("manual-fetch-meta").addEventListener("click", () => fetchManualMeta().catch((error) => {
+        els.manualStatusLine.textContent = `Lấy thông tin lỗi: ${error.message || error}`;
+      }));
+      $("manual-paste").addEventListener("click", async () => {
+        try {
+          els.manualUrl.value = await navigator.clipboard.readText();
+          await fetchManualMeta();
+        } catch (error) {
+          els.manualStatusLine.textContent = `Không đọc được clipboard: ${error.message || error}`;
+        }
+      });
+      $("manual-reanalyze").addEventListener("click", analyzeManualNewsForm);
+      $("manual-reset").addEventListener("click", resetManualForm);
+      els.manualList.addEventListener("click", async (event) => {
+        const edit = event.target.closest("[data-manual-edit]");
+        if (edit) fillManualForm(state.manualNews.find((item) => item.id === edit.dataset.manualEdit) || {});
+        const status = event.target.closest("[data-manual-status]");
+        if (status) await updateManualStatus(status.dataset.manualStatus, status.dataset.status);
+        const remove = event.target.closest("[data-manual-delete]");
+        if (remove) await deleteManualNews(remove.dataset.manualDelete);
+      });
       $("save-source").addEventListener("click", async () => {
         try {
           await saveSource(sourcePayloadFromForm());
@@ -1078,6 +2764,55 @@
         }
         await forceRefresh(state.editingId);
       });
+      $("override-save").addEventListener("click", async () => {
+        try {
+          await saveAdminOverride();
+          els.overrideStatus.textContent = "Đã lưu gán mặc định. Từ nay tiêu đề khớp mẫu này sẽ dùng nhóm/mã của Admin.";
+        } catch (error) {
+          els.overrideStatus.textContent = `Không lưu được override: ${error.message}`;
+        }
+      });
+      $("override-preset-warrant")?.addEventListener("click", applyWarrantOverridePreset);
+      $("override-reset").addEventListener("click", resetOverrideForm);
+      $("override-sector").addEventListener("change", () => {
+        $("override-sector-other").hidden = $("override-sector").value !== "Nhóm khác";
+        if ($("override-sector").value !== "Nhóm khác") $("override-sector-other").value = "";
+      });
+      $("override-reload").addEventListener("click", () => loadAdminOverrides().catch((error) => {
+        els.overrideStatus.textContent = `Không reload được overrides: ${error.message}`;
+      }));
+      $("override-test").addEventListener("click", testAdminOverride);
+      els.overrideSavedSearch?.addEventListener("input", () => {
+        state.overrideSavedSearch = els.overrideSavedSearch.value || "";
+        renderAdminOverrides();
+      });
+      els.overrideNewsSearch?.addEventListener("input", () => {
+        state.overrideNewsSearch = els.overrideNewsSearch.value || "";
+        renderOverrideNewsList();
+      });
+      els.overrideNewsBody.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-override-from-news]");
+        if (button) fillOverrideFromNews(state.news.find((item) => item.id === button.dataset.overrideFromNews));
+      });
+      els.overrideUngroupedList?.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-override-from-news]");
+        if (button) fillOverrideFromNews(state.news.find((item) => item.id === button.dataset.overrideFromNews));
+      });
+      const handleOverrideRuleAction = async (event) => {
+        const edit = event.target.closest("[data-override-edit]");
+        if (edit) applyOverrideToForm(state.adminOverrides.find((rule) => rule.id === edit.dataset.overrideEdit) || {});
+        const toggle = event.target.closest("[data-override-toggle]");
+        if (toggle) {
+          const rule = state.adminOverrides.find((item) => item.id === toggle.dataset.overrideToggle);
+          await db.collection("market_admin_overrides").doc(toggle.dataset.overrideToggle).set({
+            active: rule?.active === false,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          }, {merge: true});
+          await loadAdminOverrides();
+        }
+      };
+      if (els.overrideRulesBody) els.overrideRulesBody.addEventListener("click", handleOverrideRuleAction);
+      if (els.overrideSavedList) els.overrideSavedList.addEventListener("click", handleOverrideRuleAction);
       $("bulk-test").addEventListener("click", async () => {
         const urls = $("bulk-urls").value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
         const type = $("bulk-type").value;
@@ -1135,11 +2870,88 @@
         const remove = event.target.closest("[data-delete]");
         if (remove && confirm("Xóa nguồn này khỏi watch_sources?")) await db.collection("watch_sources").doc(remove.dataset.delete).delete();
       });
-      document.querySelectorAll("[data-op]").forEach((button) => {
-        button.addEventListener("click", () => requestOp(button.dataset.op).catch((error) => {
-          els.opsStatus.textContent = `Không tạo được ops request: ${error.message}`;
-        }));
-      });
+    }
+
+    function configureOverrideGuideUi() {
+      const firstPhrase = $("override-title-pattern");
+      if (!firstPhrase) return;
+      const panel = firstPhrase.closest(".panel");
+      const heading = panel?.querySelector(".panel-heading h2, :scope > h2");
+      if (heading) heading.textContent = "F. Admin g\u00e1n nhanh Market Intelligence";
+      const body = firstPhrase.closest(".panel-body") || panel;
+      const intro = body?.querySelector(":scope > .subtext");
+      if (intro) {
+        intro.textContent = "T\u1ea1o lu\u1eadt \u0111\u01a1n gi\u1ea3n: tin n\u00e0o c\u00f3 t\u1eeb/c\u1ee5m t\u1eeb b\u1ea1n nh\u1eadp th\u00ec t\u1ef1 g\u00e1n nh\u00f3m v\u00e0 m\u00e3. Ch\u1ee9ng quy\u1ec1n ch\u1ec9 l\u00e0 v\u00ed d\u1ee5, b\u1ea1n c\u00f3 th\u1ec3 \u0111\u1ed5i th\u00e0nh b\u1ea5t k\u1ef3 t\u1eeb n\u00e0o.";
+      }
+
+      const grid = firstPhrase.closest(".grid");
+      if (grid && !grid.querySelector(".override-guide")) {
+        const guide = document.createElement("div");
+        guide.className = "override-guide";
+        const lines = [
+          ["1. Tin kh\u1edbp khi...", "Nh\u1eadp t\u1eeb kh\u00f3a/c\u1ee5m t\u1eeb c\u1ea7n b\u1eaft. V\u00ed d\u1ee5: ", "ch\u1ee9ng quy\u1ec1n"],
+          ["2. G\u00e1n th\u00e0nh...", "Ch\u1ecdn nh\u00f3m mu\u1ed1n g\u00e1n. V\u00ed d\u1ee5: ", "Ch\u1ee9ng kho\u00e1n"],
+          ["3. M\u00e3 l\u1ea5y ra sao?", "N\u1ebfu tin c\u00f3 m\u00e3 trong ti\u00eau \u0111\u1ec1, ch\u1ecdn c\u00e1ch t\u1ef1 l\u1ea5y m\u00e3. V\u00ed d\u1ee5: ", "VNM.KIS... -> VNM"],
+        ];
+        for (const [title, text, example] of lines) {
+          const row = document.createElement("div");
+          const strong = document.createElement("strong");
+          strong.textContent = title;
+          const span = document.createElement("span");
+          span.append(" ", text);
+          const code = document.createElement("code");
+          code.textContent = example;
+          span.appendChild(code);
+          row.append(strong, span);
+          guide.appendChild(row);
+        }
+        grid.insertBefore(guide, grid.firstElementChild);
+      }
+
+      firstPhrase.placeholder = "T\u1eeb/c\u1ee5m c\u1ea7n b\u1eaft, v\u00ed d\u1ee5: ch\u1ee9ng quy\u1ec1n";
+      $("override-title-pattern-2").placeholder = "Th\u00eam \u0111i\u1ec1u ki\u1ec7n n\u1ebfu c\u1ea7n, v\u00ed d\u1ee5: ni\u00eam y\u1ebft";
+      $("override-title-pattern-3").placeholder = "C\u00f3 th\u1ec3 \u0111\u1ec3 tr\u1ed1ng";
+      $("override-joiner-12").title = "Quan h\u1ec7 gi\u1eefa \u0111i\u1ec1u ki\u1ec7n 1 v\u00e0 2";
+      $("override-joiner-23").title = "Quan h\u1ec7 gi\u1eefa \u0111i\u1ec1u ki\u1ec7n 2 v\u00e0 3";
+      $("override-joiner-12").innerHTML = `<option value="AND">V\u00c0</option><option value="OR">HO\u1eb6C</option>`;
+      $("override-joiner-23").innerHTML = `<option value="AND">V\u00c0</option><option value="OR">HO\u1eb6C</option>`;
+
+      const sector = $("override-sector");
+      const currentSector = sector.value;
+      const sectors = [
+        "Tin kh\u00e1c", "Qu\u1ed1c t\u1ebf", "Nga-UK", "M\u1ef9-Iran", "V\u0129 m\u00f4", "FX/Crypto",
+        "Th\u1ecb tr\u01b0\u1eddng", "Ch\u1ee9ng kho\u00e1n", "Ng\u00e2n h\u00e0ng", "B\u1ea3o hi\u1ec3m",
+        "B\u1ea5t \u0111\u1ed9ng s\u1ea3n", "\u0110\u1ea7u t\u01b0 c\u00f4ng", "T\u00e0i nguy\u00ean",
+        "D\u1ea7u kh\u00ed", "\u0110i\u1ec7n", "Th\u00e9p", "Ph\u00e2n b\u00f3n / H\u00f3a ch\u1ea5t",
+        "C\u00f4ng ngh\u1ec7 & Vi\u1ec5n th\u00f4ng", "V\u00e0ng/B\u1ea1c", "T\u1ef7 gi\u00e1",
+        "B\u00e1n l\u1ebb / Ti\u00eau d\u00f9ng", "Khu c\u00f4ng nghi\u1ec7p", "Logistics / C\u1ea3ng bi\u1ec3n",
+        "H\u00e0ng kh\u00f4ng", "Th\u1ee7y s\u1ea3n", "D\u1ec7t may", "Y t\u1ebf", "Gi\u00e1o d\u1ee5c",
+        "Ph\u00e1p lu\u1eadt", "\u0110\u1eddi s\u1ed1ng", "Nh\u00f3m kh\u00e1c",
+      ];
+      sector.innerHTML = sectors.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+      sector.value = sectors.includes(currentSector) ? currentSector : "Tin kh\u00e1c";
+      $("override-sector-other").placeholder = "Nh\u1eadp nh\u00f3m kh\u00e1c";
+      $("override-related-stocks").placeholder = "M\u00e3 c\u1ed1 \u0111\u1ecbnh, v\u00ed d\u1ee5 HPG,HSG. \u0110\u1ec3 tr\u1ed1ng n\u1ebfu mu\u1ed1n t\u1ef1 l\u1ea5y m\u00e3.";
+
+      const autoMode = $("override-auto-ticker-mode");
+      const currentMode = autoMode.value;
+      const modes = [
+        ["", "Kh\u00f4ng t\u1ef1 l\u1ea5y m\u00e3"],
+        ["first_code", "L\u1ea5y m\u00e3 \u0111\u1ea7u ti\u00ean trong ti\u00eau \u0111\u1ec1"],
+        ["dotted_underlying", "L\u1ea5y m\u00e3 tr\u01b0\u1edbc d\u1ea5u ch\u1ea5m, v\u00ed d\u1ee5 VNM.KIS..."],
+        ["warrant_underlying", "M\u1eabu ch\u1ee9ng quy\u1ec1n: l\u1ea5y m\u00e3 c\u01a1 s\u1edf"],
+        ["regex", "Regex t\u1ef1 \u0111\u1ecbnh ngh\u0129a"],
+      ];
+      autoMode.innerHTML = modes.map(([value, label]) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`).join("");
+      autoMode.value = modes.some(([value]) => value === currentMode) ? currentMode : "";
+      $("override-auto-ticker-regex").placeholder = "Regex c\u00f3 nh\u00f3m b\u1eaft m\u00e3, v\u00ed d\u1ee5: \\\\b([A-Z]{2,5})\\\\.";
+
+      $("override-save").textContent = "L\u01b0u lu\u1eadt g\u00e1n";
+      $("override-preset-warrant").textContent = "\u0110i\u1ec1n nhanh m\u1eabu ch\u1ee9ng quy\u1ec1n";
+      $("override-reset").textContent = "X\u00f3a form";
+      $("override-reload").textContent = "T\u1ea3i l\u1ea1i lu\u1eadt";
+      $("override-test").textContent = "Th\u1eed lu\u1eadt";
+      $("override-test-output").textContent = "Ch\u01b0a c\u00f3 k\u1ebft qu\u1ea3 th\u1eed.";
     }
 
     function start() {
@@ -1150,8 +2962,29 @@
       if (appStarted) return;
       appStarted = true;
       db = firebase.firestore();
+      enhanceCollapsiblePanels();
+      configureOverrideGuideUi();
       bindEvents();
+      resetTelegramForm();
+      resetManualForm();
       resetSourceForm();
+      resetOverrideForm();
+      callWatcherControl().catch((error) => {
+        els.watcherAutoStatus.textContent = `Không kết nối được local watcher control: ${error.message || error}. Chạy npm run telegram-server trước.`;
+      });
+      setInterval(() => {
+        callWatcherControl().catch(() => {});
+      }, 15000);
+      loadAdminOverrides().catch((error) => {
+        els.overrideStatus.textContent = `Admin overrides dùng cache/local: ${error.message}`;
+        try {
+          state.adminOverrides = JSON.parse(localStorage.getItem("new24h_market_admin_overrides") || "[]");
+          cacheAdminOverrides();
+          renderAdminOverrides();
+        } catch {
+          state.adminOverrides = [];
+        }
+      });
       db.collection("watch_sources").onSnapshot((snapshot) => {
         state.sources = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}))
           .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
@@ -1160,13 +2993,34 @@
       }, (error) => {
         els.status.textContent = `Không tải được watch_sources: ${error.message}`;
       });
+      db.collection("telegram_groups").orderBy("name").onSnapshot((snapshot) => {
+        state.telegramGroups = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+        renderTelegramGroups();
+      }, (error) => {
+        els.telegramStatus.textContent = `Không tải được telegram_groups: ${error.message || error}`;
+      });
+      db.collection("telegram_settings").doc("auto_push").onSnapshot((doc) => {
+        state.telegramAutoPushEnabled = doc.exists && doc.data()?.enabled === true;
+        renderTelegramAutoPush();
+        if (state.telegramAutoPushEnabled) maybeRunTelegramAutoPush();
+      }, (error) => {
+        els.telegramAutoStatus.textContent = `Không tải được auto push setting: ${error.message || error}`;
+      });
       db.collection("news").orderBy("publishedAt", "desc").limit(100).onSnapshot((snapshot) => {
         state.news = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
         renderNewsOps();
+        maybeRunTelegramAutoPush();
+      });
+      db.collection("manual_news").orderBy("publishedAt", "desc").limit(120).onSnapshot((snapshot) => {
+        state.manualNews = snapshot.docs.map((doc) => ({id: doc.id, ...doc.data()}));
+        renderManualNews();
+      }, (error) => {
+        els.manualStatusLine.textContent = `Không tải được manual_news: ${error.message}`;
       });
     }
 
     function showAdminApp(user) {
+      currentAdminUser = user;
       $("lock").classList.add("hidden");
       $("app").classList.remove("hidden");
       els.status.textContent = `Admin: ${user.email}`;
@@ -1179,33 +3033,82 @@
       $("auth-status").textContent = message || "Chưa đăng nhập.";
     }
 
+    function authErrorMessage(error) {
+      const code = error?.code || "";
+      const message = error?.message || String(error || "");
+      if (code === "auth/unauthorized-domain") {
+        return "Domain này chưa được thêm vào Firebase Auth > Authorized domains.";
+      }
+      if (code === "auth/popup-blocked") {
+        return "Trình duyệt đang chặn popup đăng nhập.";
+      }
+      if (code === "auth/popup-closed-by-user") {
+        return "Bạn đã đóng popup đăng nhập trước khi hoàn tất.";
+      }
+      return `${code} ${message}`.trim();
+    }
+
+    function adminAuthMessage(user) {
+      if (!user) return "Chưa đăng nhập admin.";
+      if (!ALLOWED_ADMIN_EMAILS.includes(user.email)) {
+        return `Tài khoản ${user.email || "không rõ email"} chưa có quyền admin. Hãy đăng xuất rồi chọn ${ALLOWED_ADMIN_EMAILS.join(", ")}.`;
+      }
+      return `Admin: ${user.email}`;
+    }
+
     function initAuth() {
       if (!ensureFirebaseInitialized(true)) {
         showLocked("Không tải được Firebase Auth SDK.");
         return;
       }
+      if (location.hostname === "127.0.0.1") {
+        showLocked("Firebase Auth không cho phép 127.0.0.1. Bấm Đăng nhập Google để chuyển sang localhost.");
+      }
       $("signin-button").addEventListener("click", async () => {
         try {
-          await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+          if (location.hostname === "127.0.0.1") {
+            location.href = `${location.protocol}//localhost:${location.port}${location.pathname}${location.search}${location.hash}`;
+            return;
+          }
+          $("auth-status").textContent = "Đang mở Google để đăng nhập...";
+          await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+          const provider = new firebase.auth.GoogleAuthProvider();
+          provider.setCustomParameters({prompt: "select_account"});
+          try {
+            await firebase.auth().signInWithPopup(provider);
+          } catch (popupError) {
+            if (["auth/popup-blocked", "auth/cancelled-popup-request"].includes(popupError.code)) {
+              $("auth-status").textContent = `${authErrorMessage(popupError)} Đang chuyển sang redirect...`;
+              await firebase.auth().signInWithRedirect(provider);
+              return;
+            }
+            throw popupError;
+          }
         } catch (error) {
-          showLocked(`Không đăng nhập được: ${error.message}`);
+          showLocked(`Không đăng nhập được: ${authErrorMessage(error)}`);
         }
       });
       $("signout-button").addEventListener("click", () => firebase.auth().signOut());
+      firebase.auth().getRedirectResult().catch((error) => {
+        showLocked(`Không hoàn tất đăng nhập Google: ${authErrorMessage(error)}`);
+      });
       firebase.auth().onAuthStateChanged((user) => {
         if (user && ALLOWED_ADMIN_EMAILS.includes(user.email)) {
           showAdminApp(user);
         } else if (user) {
-          firebase.auth().signOut();
-          alert("Không có quyền admin");
-          showLocked(`Tài khoản ${user.email} chưa có quyền admin.`);
+          showLocked(adminAuthMessage(user));
         } else {
-          showLocked("Chưa đăng nhập admin.");
+          showLocked(adminAuthMessage(user));
         }
       });
     }
 
-    window.addEventListener("load", initAuth);
+    window.addEventListener("load", () => {
+      installDomTextFixer();
+      configurePublicDashboardLink();
+      initAuth();
+    });
   </script>
 </body>
 </html>
+

@@ -2,9 +2,13 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 const crypto = require("crypto");
+const http = require("http");
+const https = require("https");
 const Parser = require("rss-parser");
 const entities = require("entities");
 const admin = require("firebase-admin");
+const {archiveExpiredNewsForVietnamDay} = require("./daily-news-archive");
+const {isLikelyEnglishText, translateNewsTextLite} = require("../public/js/localTranslator");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const NEWS_SOURCES_PATH = path.join(ROOT_DIR, "js", "core", "newsSources.js");
@@ -15,13 +19,26 @@ const STATE_PATH = path.join(__dirname, ".watcher-state.json");
 const MAX_ITEMS_PER_CHECK = Number(process.env.WATCHER_MAX_ITEMS || 20);
 const FETCH_TIMEOUT_MS = Number(process.env.WATCHER_FETCH_TIMEOUT_MS || 8000);
 const SOURCE_REFRESH_MS = Number(process.env.WATCHER_SOURCE_REFRESH_MS || 5 * 60 * 1000);
-const ARCHIVE_AFTER_DAYS = Number(process.env.WATCHER_ARCHIVE_AFTER_DAYS || 30);
-const DELETE_OLD_NEWS = process.env.WATCHER_DELETE_OLD_NEWS === "true";
+const SKIP_ARCHIVE = process.env.WATCHER_SKIP_ARCHIVE === "true";
+const SOURCE_MODE = String(process.env.WATCHER_SOURCE_MODE || "local").toLowerCase();
+const DEDUPE_FIRESTORE = process.env.WATCHER_DEDUPE_FIRESTORE === "true";
+const WRITE_SOURCE_STATE_TO_FIRESTORE = process.env.WATCHER_WRITE_SOURCE_STATE === "true";
+const WRITE_WATCHER_LOGS = process.env.WATCHER_WRITE_LOGS === "true";
 const LEGAL_SUMMARY_LIMIT = 300;
 const RUN_ONCE = process.argv.includes("--once");
+const RUN_ONCE_ROUNDS = process.env.WATCHER_ONCE_ROUNDS
+  ? Math.max(1, Number(process.env.WATCHER_ONCE_ROUNDS))
+  : Number.POSITIVE_INFINITY;
+const RUN_ONCE_TIME_BUDGET_MS = Math.max(30 * 1000, Number(process.env.WATCHER_ONCE_TIME_BUDGET_MS || 8 * 60 * 1000));
+const RUN_ONCE_ROUND_DELAY_MS = Math.max(0, Number(process.env.WATCHER_ONCE_ROUND_DELAY_MS || 1500));
 const CATEGORY_BASE_INTERVAL_MINUTES = Number(process.env.WATCHER_CATEGORY_BASE_MINUTES || 6);
 const DOMAIN_COOLDOWN_MIN_MS = Number(process.env.WATCHER_DOMAIN_COOLDOWN_MIN_MS || 60 * 1000);
 const DOMAIN_COOLDOWN_MAX_MS = Number(process.env.WATCHER_DOMAIN_COOLDOWN_MAX_MS || 120 * 1000);
+const RSS_FETCH_HEADERS = {
+  "user-agent": "new24h-news-monitor/1.0",
+  "accept": "application/rss+xml, application/xml, text/xml, text/html, */*",
+};
+const INSECURE_TLS_FALLBACK_HOSTS = new Set(["hnx.vn", "www.hnx.vn"]);
 
 const parser = new Parser({
   timeout: FETCH_TIMEOUT_MS,
@@ -35,6 +52,17 @@ const parser = new Parser({
   },
 });
 const robotsCache = new Map();
+let firestoreQuotaExhausted = false;
+
+function isFirestoreQuotaError(error) {
+  return String(error?.message || error || "").includes("RESOURCE_EXHAUSTED")
+    || String(error?.code || "") === "8";
+}
+
+function isFirestoreAlreadyExistsError(error) {
+  return String(error?.message || error || "").includes("ALREADY_EXISTS")
+    || String(error?.code || "") === "6";
+}
 
 function readProjectId() {
   if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID;
@@ -89,6 +117,36 @@ function domainOf(url) {
   }
 }
 
+function fixMojibake(value) {
+  let text = String(value || "");
+  text = text
+    .replace(/Thá»‹ trÆ°á»ng/g, "Thị trường")
+    .replace(/thá»‹ trÆ°á»ng/g, "thị trường")
+    .replace(/tÃ i nguyÃªn/g, "tài nguyên")
+    .replace(/khÃ­ háº­u/g, "khí hậu")
+    .replace(/ngÆ°á»i dÃ¢n/g, "người dân");
+  const map = [
+    ["ThÃ´ng bÃ¡o", "Thông báo"],
+    ["CÃ´ng bá»‘", "Công bố"],
+    ["cá»• Ä‘Ã´ng", "cổ đông"],
+    ["Ä‘áº¡i há»™i", "đại hội"],
+    ["nghÃª quyáº¿t", "nghị quyết"],
+    ["Nghá»‹ quyáº¿t", "Nghị quyết"],
+    ["HÄQT", "HĐQT"],
+    ["ÄHÄCÄ", "ĐHĐCĐ"],
+    ["Ã½ kiáº¿n", "ý kiến"],
+    ["vÄƒn báº£n", "văn bản"],
+    ["chá»‘t", "chốt"],
+    ["danh sÃ¡ch", "danh sách"],
+    ["há»£p Ä‘á»“ng", "hợp đồng"],
+    ["cÃ´ng ty", "công ty"],
+    ["hÃª sinh thÃ¡i", "hệ sinh thái"],
+    ["há»‡ sinh thÃ¡i", "hệ sinh thái"],
+  ];
+  for (const [bad, good] of map) text = text.split(bad).join(good);
+  return text;
+}
+
 function stripHtml(value) {
   const clean = String(value || "")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -105,9 +163,18 @@ function stripHtml(value) {
         return match;
       }
     })
+    .replace(/#(\d{2,7});?/g, (match, code) => {
+      const codePoint = Number(code);
+      if (!Number.isFinite(codePoint)) return match;
+      try {
+        return String.fromCodePoint(codePoint);
+      } catch (error) {
+        return match;
+      }
+    })
     .replace(/\s+/g, " ")
     .trim();
-  return entities.decodeHTML(clean);
+  return fixMojibake(entities.decodeHTML(clean));
 }
 
 function cleanHeadline(value) {
@@ -141,6 +208,7 @@ function parserTypeForSource(source) {
   try {
     const host = new URL(source.url).hostname.replace(/^www\./, "");
     if (/24h\.com\.vn$/i.test(host)) return "parser_24h";
+    if (/vietstock\.vn$/i.test(host) && /moi-cap-nhat/i.test(source.url || "")) return "vietstock_moi_cap_nhat";
   } catch (error) {
     return value || "generic";
   }
@@ -194,6 +262,62 @@ function normalizedTitleKey(title) {
     .replace(/đ/g, "d")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+function sourceKeyText(source = {}) {
+  return [
+    source.id,
+    source.sourceId,
+    source.name,
+    source.sourceName,
+    source.category,
+    source.url,
+    source.rssUrl,
+  ].filter(Boolean).join(" ").toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function sourceCategorySector(source = {}) {
+  const category = String(source.category || "").toLowerCase();
+  if (category === "stocks") return "Chứng khoán";
+  if (category === "macro") return "Vĩ mô";
+  if (category === "research") return "Phân tích";
+  return "";
+}
+
+function usefulSector(value) {
+  const text = stripHtml(value || "").trim();
+  const key = normalizedTitleKey(text);
+  if (!text || ["other", "nhom khac", "tin khac"].includes(key)) return "";
+  return text;
+}
+
+function extractLeadingTicker(title) {
+  const match = String(title || "").trim().match(/^([A-Z][A-Z0-9]{2,11})(?=\s*:)/);
+  return match ? match[1].toUpperCase() : "";
+}
+
+function extractWarrantTicker(title) {
+  const raw = String(title || "");
+  const key = normalizedTitleKey(raw);
+  if (!/\bchung quyen\b/.test(key)) return "";
+  const dotted = raw.match(/\b([A-Z]{2,5})\.[A-Z0-9]{2,}(?:\.|$)/);
+  if (dotted) return dotted[1].toUpperCase();
+  const afterPhrase = raw.match(/ch(?:ứ|u)ng\s+quy(?:ề|e)n[^A-Z0-9]{0,40}\b([A-Z]{2,5})\b/i);
+  return afterPhrase ? afterPhrase[1].toUpperCase() : "";
+}
+
+function sourceAllowsStockTickers(source = {}) {
+  const keyText = sourceKeyText(source);
+  if (/\b(coindesk|cryptoslate|cryptonews|cointelegraph|bitcoin news|bitcoin_news|crypto|fx|gold)\b/.test(keyText)) {
+    return false;
+  }
+  return source.group === "domestic"
+    || /\b(hose|hsx|hnx|vietstock|chung khoan|stocks?|co phieu)\b/.test(keyText);
 }
 
 function scoreCandidate(candidate, source, seen, seenTitles) {
@@ -317,6 +441,35 @@ function normalizeUrl(rawUrl, baseUrl = "") {
   }
 }
 
+function isBrokenPublicArticleUrl(url) {
+  return /^https?:\/\/(?:www\.)?hnx\.vn:7978\//i.test(String(url || ""));
+}
+
+function publicArticleUrl(url) {
+  const value = String(url || "").trim();
+  if (/^https?:\/\/api\.hsx\.vn\/tin-tuc\//i.test(value)) {
+    return value.replace(/^https?:\/\/api\.hsx\.vn/i, "https://www.hsx.vn");
+  }
+  if (isBrokenPublicArticleUrl(value)) {
+    return value.replace(/^https?:\/\/(?:www\.)?hnx\.vn:7978/i, "https://www.hnx.vn");
+  }
+  return value;
+}
+
+function publicSourceName(source, fallback = "") {
+  const text = stripHtml([
+    source?.id,
+    source?.sourceId,
+    source?.url,
+    source?.name,
+    source?.sourceName,
+    fallback,
+  ].filter(Boolean).join(" ")).toLowerCase();
+  if (/\bhnx\b|hnx\.vn|hnx_/.test(text)) return "HNX";
+  if (/\bhose\b|\bhsx\b|api\.hsx\.vn|hsx\.vn|hose_/.test(text)) return "HOSE";
+  return fallback || source?.name || source?.sourceName || "Unknown";
+}
+
 function uniqueKey(source, canonicalUrl) {
   return crypto
     .createHash("sha256")
@@ -407,21 +560,30 @@ async function loadFirestoreSources(db, collectionName) {
 
 async function loadSources(db, state) {
   let sources = [];
-  try {
-    sources = await loadFirestoreSources(db, "watch_sources");
-  } catch (error) {
-    console.log(`[WARN] watch_sources unavailable: ${error.message}`);
+  if (SOURCE_MODE === "local") {
+    sources = loadFileSources();
   }
 
-  if (!sources.length) {
+  if (!sources.length && SOURCE_MODE !== "local" && !firestoreQuotaExhausted) {
+    try {
+      sources = await loadFirestoreSources(db, "watch_sources");
+    } catch (error) {
+      if (isFirestoreQuotaError(error)) firestoreQuotaExhausted = true;
+      console.log(`[WARN] watch_sources unavailable: ${error.message}`);
+    }
+  }
+
+  if (!sources.length && SOURCE_MODE !== "local" && !firestoreQuotaExhausted) {
     try {
       sources = await loadFirestoreSources(db, "rss_sources");
     } catch (error) {
+      if (isFirestoreQuotaError(error)) firestoreQuotaExhausted = true;
       console.log(`[WARN] rss_sources unavailable: ${error.message}`);
     }
   }
 
   if (!sources.length) {
+    if (firestoreQuotaExhausted) console.log("[WARN] Firestore quota exhausted; using local file sources only for this run.");
     sources = loadFileSources();
   }
 
@@ -445,15 +607,64 @@ class FetchStatusError extends Error {
   }
 }
 
+function allowsInsecureTlsFallback(url) {
+  try {
+    return INSECURE_TLS_FALLBACK_HOSTS.has(new URL(url).hostname.toLowerCase());
+  } catch (error) {
+    return false;
+  }
+}
+
+function isTlsCertificateError(error) {
+  const code = String(error?.cause?.code || error?.code || "");
+  const message = String(error?.message || error || "");
+  return code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE"
+    || code === "SELF_SIGNED_CERT_IN_CHAIN"
+    || code === "CERT_HAS_EXPIRED"
+    || message.includes("unable to verify the first certificate");
+}
+
+function fetchTextWithInsecureTls(url, redirectCount = 0) {
+  if (redirectCount > 3) {
+    return Promise.reject(new FetchStatusError("too_many_redirects", null, "fetch_failed"));
+  }
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const client = parsed.protocol === "http:" ? http : https;
+    const request = client.get(parsed, {
+      headers: RSS_FETCH_HEADERS,
+      rejectUnauthorized: false,
+      timeout: FETCH_TIMEOUT_MS,
+    }, (response) => {
+      const status = response.statusCode || 0;
+      const location = response.headers.location;
+      if (status >= 300 && status < 400 && location) {
+        response.resume();
+        const nextUrl = new URL(location, parsed).toString();
+        fetchTextWithInsecureTls(nextUrl, redirectCount + 1).then(resolve, reject);
+        return;
+      }
+      if (status < 200 || status >= 300) {
+        response.resume();
+        const code = status === 403 ? "blocked_403" : status === 429 ? "rate_limited_429" : "fetch_failed";
+        reject(new FetchStatusError(`HTTP ${status} ${response.statusMessage || ""}`.trim(), status, code));
+        return;
+      }
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+      response.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    });
+    request.on("timeout", () => request.destroy(new FetchStatusError("timeout", null, "timeout")));
+    request.on("error", reject);
+  });
+}
+
 async function fetchText(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const response = await fetch(url, {
-      headers: {
-        "user-agent": "new24h-news-monitor/1.0",
-        "accept": "application/rss+xml, application/xml, text/xml, text/html, */*",
-      },
+      headers: RSS_FETCH_HEADERS,
       signal: controller.signal,
     });
     if (!response.ok) {
@@ -464,6 +675,9 @@ async function fetchText(url) {
   } catch (error) {
     if (error.name === "AbortError") throw new FetchStatusError("timeout", null, "timeout");
     if (error instanceof FetchStatusError) throw error;
+    if (isTlsCertificateError(error) && allowsInsecureTlsFallback(url)) {
+      return await fetchTextWithInsecureTls(url);
+    }
     throw new FetchStatusError(error.message || "network_error", null, "network_error");
   } finally {
     clearTimeout(timeout);
@@ -522,6 +736,13 @@ function validPublishedIso(value) {
   const nextYear = new Date().getUTCFullYear() + 1;
   if (year < 2000 || year > nextYear) return null;
   return date.toISOString();
+}
+
+function vietstockDotNetDate(value) {
+  const match = String(value || "").match(/\/Date\((\d+)\)\//);
+  if (!match) return null;
+  const date = new Date(Number(match[1]));
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
 function publishedAtFromArticleUrl(value) {
@@ -676,11 +897,82 @@ function parseCategorySourceFromHtml(source, html) {
   return items;
 }
 
+async function parseVietstockLatestSource(source) {
+  const endpoint = new URL("/_Partials/NewsNewUpdatePaging", source.url).href;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  let payload;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        ...RSS_FETCH_HEADERS,
+        accept: "application/json, text/javascript, */*; q=0.01",
+        "content-type": "application/json; charset=utf-8",
+        referer: source.url,
+        "x-requested-with": "XMLHttpRequest",
+      },
+      body: JSON.stringify({item: MAX_ITEMS_PER_CHECK, row: 1}),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const code = response.status === 403 ? "blocked_403" : response.status === 429 ? "rate_limited_429" : "fetch_failed";
+      throw new FetchStatusError(`HTTP ${response.status} ${response.statusText}`, response.status, code);
+    }
+    payload = await response.json();
+  } catch (error) {
+    if (error.name === "AbortError") throw new FetchStatusError("timeout", null, "timeout");
+    if (error instanceof FetchStatusError) throw error;
+    throw new FetchStatusError(error.message || "network_error", null, "network_error");
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const rows = Array.isArray(payload?.Data) ? payload.Data : [];
+  const items = rows.slice(0, MAX_ITEMS_PER_CHECK).map((row, positionIndex) => {
+    const canonicalUrl = normalizeUrl(row.URL || "", source.url);
+    const title = cleanHeadline(row.Title || "");
+    return {
+      title,
+      url: canonicalUrl,
+      canonicalUrl,
+      summary: limitSummary(row.Head || ""),
+      thumbnail: row.ThumbImageUrl || row.HeadImageUrl || "",
+      publishedAt: vietstockDotNetDate(row.PublishTime),
+      source: source.name,
+      category: source.category || "stocks",
+      sector: usefulSector(source.sector) || defaultSectorForSource(source) || "Chá»©ng khoÃ¡n",
+      selectorHint: "vietstock_moi_cap_nhat",
+      score: 100,
+      positionIndex,
+    };
+  }).filter((item) => item.title && item.canonicalUrl);
+
+  items.parserQuality = {
+    acceptedCount: items.length,
+    rejectedCount: Math.max(0, rows.length - items.length),
+    avgScore: items.length ? 100 : 0,
+    noiseRatio: rows.length ? Number(((rows.length - items.length) / rows.length).toFixed(2)) : 0,
+    qualityPercent: rows.length ? Math.round((items.length / rows.length) * 100) : 0,
+    rejectReasons: {},
+  };
+  items.parserRejected = {};
+  items.parserPattern = "vietstock_moi_cap_nhat";
+  items.recentAcceptedSelectors = [{selector: "vietstock_moi_cap_nhat", count: items.length}];
+  if (items.length) {
+    console.log(`[PARSE] ${source.name} category parser=vietstock_moi_cap_nhat items=${items.length} quality=${items.parserQuality.qualityPercent}% avgScore=100 rejected={}`);
+  }
+  return items;
+}
+
 async function parseCategorySource(source) {
   const allowed = await isAllowedByRobots(source.url);
   if (!allowed) {
     console.log(`[SKIP] ${source.name} - robots.txt disallows category path`);
     return [];
+  }
+  if (parserTypeForSource(source) === "vietstock_moi_cap_nhat") {
+    return await parseVietstockLatestSource(source);
   }
   const html = await fetchText(source.url);
   if (/captcha|recaptcha|cloudflare|cf-challenge|verify you are human|xác minh/i.test(html)) {
@@ -704,6 +996,45 @@ function toFirestoreTimestamp(value) {
   return admin.firestore.Timestamp.fromDate(Number.isNaN(date.getTime()) ? new Date() : date);
 }
 
+function defaultSectorForSource(source = {}) {
+  const keyText = sourceKeyText(source);
+  const rules = [
+    {pattern: /\b(chung khoan|stocks?|hose|hsx|hnx|thi truong chung khoan|cong bo tu so)\b/, sector: "Chứng khoán"},
+    {pattern: /\b(tai chinh|finance|financial)\b/, sector: "Tài chính"},
+    {pattern: /\b(dia oc|bat dong san|real estate)\b/, sector: "Bất động sản"},
+    {pattern: /\b(kinh te the gioi|the gioi|macro|world economy)\b/, sector: "Vĩ mô"},
+    {pattern: /\b(nhip cau doanh nghiep|doanh nghiep|company|cong ty)\b/, sector: "Doanh nghiệp"},
+    {pattern: /\b(dau tu|thi truong|market|tin moi)\b/, sector: "Thị trường"},
+    {pattern: /\b(su kien dao tao|research|phan tich)\b/, sector: "Phân tích"},
+  ];
+  const matched = rules.find((rule) => rule.pattern.test(keyText));
+  if (matched) return matched.sector;
+  const categorySector = sourceCategorySector(source);
+  if (categorySector) return categorySector;
+  const sourceText = [
+    source.id,
+    source.name,
+    source.sourceName,
+    source.url,
+    source.rssUrl,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (/\bhnx\b|hnx\.vn/.test(sourceText)) return "Chứng khoán";
+  return "";
+}
+
+function shouldTranslateSourceItem(source, item) {
+  const sourceText = [
+    source.id,
+    source.name,
+    source.sourceName,
+    source.url,
+    source.rssUrl,
+    item.source,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (/coindesk|cryptoslate|cryptonews|cointelegraph|news\.bitcoin\.com|bitcoin_news|reuters|finviz/.test(sourceText)) return true;
+  return source.group === "international" && isLikelyEnglishText(item.title || item.summary || "");
+}
+
 async function saveNewItems(db, source, items) {
   let saved = 0;
   let duplicates = 0;
@@ -716,54 +1047,118 @@ async function saveNewItems(db, source, items) {
       duplicates += 1;
       return false;
     }
+    if (url) seenUrls.add(url);
+    if (titleKey) seenTitles.add(titleKey);
     return true;
   });
   if (!freshItems.length) return {saved, duplicates};
 
   const refs = freshItems.map((item) => db.collection("news").doc(uniqueKey(source, item.canonicalUrl)));
-  const existingDocs = await db.getAll(...refs);
-  const batch = db.batch();
+  let existingDocs = [];
+  if (DEDUPE_FIRESTORE) {
+    try {
+      existingDocs = await db.getAll(...refs);
+    } catch (error) {
+      if (isFirestoreQuotaError(error)) {
+        firestoreQuotaExhausted = true;
+        console.log(`[WARN] Firestore quota exhausted; skip saving ${freshItems.length} new items for ${source.name}.`);
+        return {saved: 0, duplicates, firestoreSkipped: true};
+      }
+      throw error;
+    }
+  }
+  const pendingWrites = [];
 
   for (const [index, item] of freshItems.entries()) {
     const key = uniqueKey(source, item.canonicalUrl);
     const ref = refs[index];
-    if (existingDocs[index]?.exists) {
+    if (DEDUPE_FIRESTORE && existingDocs[index]?.exists) {
       duplicates += 1;
       continue;
     }
 
     const summary = limitSummary(item.summary || item.shortDescription || "");
-    batch.set(ref, {
+    const titleOriginal = item.title || "";
+    const translateItem = shouldTranslateSourceItem(source, item);
+    const titleVi = translateItem ? translateNewsTextLite(titleOriginal) : "";
+    const summaryVi = translateItem ? limitSummary(translateNewsTextLite(summary)) : "";
+    const allowStockTickers = sourceAllowsStockTickers(source);
+    const warrantTicker = allowStockTickers ? extractWarrantTicker(item.title) : "";
+    const defaultSector = defaultSectorForSource(source);
+    const sector = warrantTicker ? "Chứng khoán" : usefulSector(item.sector) || usefulSector(source.sector) || defaultSector || "";
+    const finalSector = warrantTicker ? "Chứng khoán" : usefulSector(item.finalSector) || usefulSector(source.finalSector) || sector || defaultSector || "";
+    const leadingTicker = allowStockTickers ? (extractLeadingTicker(item.title) || warrantTicker) : "";
+    const primaryTickers = leadingTicker ? [leadingTicker] : [];
+    const relatedStocks = Array.from(new Set([
+      ...(leadingTicker ? [leadingTicker] : []),
+      ...(allowStockTickers && Array.isArray(item.relatedStocks) ? item.relatedStocks : []),
+    ].filter(Boolean)));
+    const tickers = Array.from(new Set([...primaryTickers, ...relatedStocks]));
+    pendingWrites.push({
+      ref,
+      data: {
       title: item.title,
+      titleOriginal,
+      titleVi: titleVi || null,
       summary,
+      summaryOriginal: summary,
+      summaryVi: summaryVi || null,
       shortDescription: summary,
-      source: item.source,
+      shortDescriptionVi: summaryVi || null,
+      source: publicSourceName(source, item.source),
       sourceId: source.id,
+      language: translateItem ? "en" : null,
+      translated: Boolean(titleVi || summaryVi),
+      translatedBy: titleVi || summaryVi ? "local_rule" : null,
       category: item.category,
-      sector: item.sector || source.sector || "",
+      sector,
+      finalSector,
       eventType: item.eventType || source.eventType || null,
       marketScope: item.marketScope || source.marketScope || null,
-      url: item.url,
+      url: publicArticleUrl(item.url),
       originalUrl: item.url,
       canonicalUrl: item.canonicalUrl,
+      publicUrl: publicArticleUrl(item.url),
       publishedAt: toFirestoreTimestamp(item.publishedAt),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       analyzed: false,
       impactScore: null,
-      relatedStocks: [],
+      tickers,
+      primaryTicker: primaryTickers[0] || null,
+      primaryTickers,
+      relatedStocks,
+      finalTickers: tickers,
       status: "new",
       legalMode: true,
       contentType: "link_preview",
       originalSource: item.source,
+      sourceUrl: source.url,
       summaryGeneratedBy: item.summary ? "rss" : null,
       uniqueKey: key,
+      titleKey: normalizedTitleKey(item.title),
       parserScore: item.score || null,
       parserPattern: item.selectorHint || null,
+      },
     });
-    saved += 1;
   }
 
-  if (saved > 0) await batch.commit();
+  for (const write of pendingWrites) {
+    try {
+      await write.ref.create(write.data);
+      saved += 1;
+    } catch (error) {
+      if (isFirestoreAlreadyExistsError(error)) {
+        duplicates += 1;
+        continue;
+      }
+      if (isFirestoreQuotaError(error)) {
+        firestoreQuotaExhausted = true;
+        console.log(`[WARN] Firestore quota exhausted during create; stop saving remaining items for ${source.name}.`);
+        return {saved: 0, duplicates, firestoreSkipped: true};
+      }
+      throw error;
+    }
+  }
   return {saved, duplicates};
 }
 
@@ -858,7 +1253,7 @@ async function updateSourceState(db, source, update, state) {
   state.sources[source.id] = sourceState;
   Object.assign(source, sourceState);
 
-  if (source.firestoreCollection && source.firestoreId) {
+  if (WRITE_SOURCE_STATE_TO_FIRESTORE && source.firestoreCollection && source.firestoreId) {
     const nextFetchAtMs = sourceState.nextFetchAt || sourceState.nextCheckAt || 0;
     const firestoreUpdate = {
       lastSeenUrl: sourceState.lastSeenUrl || "",
@@ -889,11 +1284,21 @@ async function updateSourceState(db, source, update, state) {
     if (savedDelta) firestoreUpdate.totalSaved = admin.firestore.FieldValue.increment(savedDelta);
     if (duplicateDelta) firestoreUpdate.totalDuplicate = admin.firestore.FieldValue.increment(duplicateDelta);
     if (errorDelta) firestoreUpdate.totalErrors = admin.firestore.FieldValue.increment(errorDelta);
-    await db.collection(source.firestoreCollection).doc(source.firestoreId).set(firestoreUpdate, {merge: true});
+    try {
+      await db.collection(source.firestoreCollection).doc(source.firestoreId).set(firestoreUpdate, {merge: true});
+    } catch (error) {
+      if (isFirestoreQuotaError(error)) {
+        firestoreQuotaExhausted = true;
+        console.log(`[WARN] source state update skipped by Firestore quota: ${source.name}`);
+      } else {
+        throw error;
+      }
+    }
   }
 }
 
 async function writeWatcherLog(db, source, log) {
+  if (!WRITE_WATCHER_LOGS) return;
   try {
     await db.collection("watcher_logs").add({
       sourceId: source.id,
@@ -908,20 +1313,15 @@ async function writeWatcherLog(db, source, log) {
 }
 
 async function archiveOldNews(db) {
-  const cutoff = new Date(Date.now() - ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000);
-  const snapshot = await db.collection("news")
-    .where("publishedAt", "<", admin.firestore.Timestamp.fromDate(cutoff))
-    .limit(100)
-    .get();
-
-  if (snapshot.empty) return 0;
-  const batch = db.batch();
-  snapshot.docs.forEach((doc) => {
-    if (DELETE_OLD_NEWS) batch.delete(doc.ref);
-    else batch.update(doc.ref, {status: "archived", archivedAt: admin.firestore.FieldValue.serverTimestamp()});
+  const result = await archiveExpiredNewsForVietnamDay(db, {
+    onBatch: ({collection, count, files}) => {
+      const relativeFiles = files.map((file) => path.relative(ROOT_DIR, file)).join(",");
+      console.log(`[ARCHIVE] collection=${collection} count=${count} files=${relativeFiles}`);
+    },
   });
-  await batch.commit();
-  return snapshot.size;
+  if (result.email?.sent) console.log("[ARCHIVE] email sent");
+  else if (result.email?.reason && result.email.reason !== "email_disabled") console.log(`[ARCHIVE] email skipped reason=${result.email.reason}`);
+  return result.deleted;
 }
 
 async function checkSource(db, source, state) {
@@ -1105,8 +1505,12 @@ async function main() {
   let sources = await loadSources(db, state);
   let lastSourceRefresh = Date.now();
   let lastArchiveRun = 0;
+  const runStartedAt = Date.now();
+  const processedOnceSourceIds = new Set();
+  let onceRound = 0;
 
-  console.log(`[START] smart watcher sources=${sources.length} maxItems=${MAX_ITEMS_PER_CHECK}`);
+  const runOnceRoundsLabel = Number.isFinite(RUN_ONCE_ROUNDS) ? RUN_ONCE_ROUNDS : "until_done";
+  console.log(`[START] smart watcher sources=${sources.length} maxItems=${MAX_ITEMS_PER_CHECK} once=${RUN_ONCE} rounds=${RUN_ONCE ? runOnceRoundsLabel : "loop"} sourceMode=${SOURCE_MODE} dedupeFirestore=${DEDUPE_FIRESTORE} writeSourceState=${WRITE_SOURCE_STATE_TO_FIRESTORE} writeLogs=${WRITE_WATCHER_LOGS}`);
 
   while (true) {
     const now = Date.now();
@@ -1116,14 +1520,29 @@ async function main() {
       console.log(`[SOURCES] refreshed count=${sources.length}`);
     }
 
-    if (now - lastArchiveRun > 60 * 60 * 1000) {
-      const archived = await archiveOldNews(db);
-      if (archived) console.log(`[ARCHIVE] count=${archived} mode=${DELETE_OLD_NEWS ? "delete" : "archive"}`);
+    if (!SKIP_ARCHIVE && now - lastArchiveRun > 60 * 60 * 1000) {
+      try {
+        const archived = await archiveOldNews(db);
+        if (archived) console.log(`[ARCHIVE] count=${archived} mode=text_then_delete`);
+      } catch (error) {
+        console.log(`[WARN] archive skipped: ${error.message}`);
+      }
+      lastArchiveRun = now;
+    } else if (SKIP_ARCHIVE && !lastArchiveRun) {
+      console.log("[ARCHIVE] skipped for this watcher run");
       lastArchiveRun = now;
     }
 
+    if (RUN_ONCE) {
+      onceRound += 1;
+      if (!firestoreQuotaExhausted) {
+        sources = await loadSources(db, state);
+      }
+      console.log(`[ROUND] ${onceRound}/${runOnceRoundsLabel} remaining=${Math.max(0, sources.length - processedOnceSourceIds.size)}`);
+    }
+
     const due = sources
-      .filter((source) => RUN_ONCE || !source.nextFetchAt || source.nextFetchAt <= now)
+      .filter((source) => RUN_ONCE ? !processedOnceSourceIds.has(source.id) : (!source.nextFetchAt || source.nextFetchAt <= now))
       .sort((a, b) => (a.nextFetchAt || 0) - (b.nextFetchAt || 0));
 
     const domainQueue = new Map();
@@ -1139,6 +1558,7 @@ async function main() {
         continue;
       }
       await checkSource(db, source, state);
+      processedOnceSourceIds.add(source.id);
       const cooldown = randomBetween(DOMAIN_COOLDOWN_MIN_MS, DOMAIN_COOLDOWN_MAX_MS);
       state.domains[domain] = {
         domain,
@@ -1153,9 +1573,15 @@ async function main() {
     }
 
     if (RUN_ONCE) {
-      console.log("[DONE] one-shot watcher run completed");
-      await admin.app().delete();
-      return;
+      const timeUsed = Date.now() - runStartedAt;
+      const allProcessed = processedOnceSourceIds.size >= sources.length;
+      if (onceRound >= RUN_ONCE_ROUNDS || allProcessed || timeUsed >= RUN_ONCE_TIME_BUDGET_MS) {
+        console.log(`[DONE] one-shot watcher run completed rounds=${onceRound} processed=${processedOnceSourceIds.size}/${sources.length} timeMs=${timeUsed}`);
+        await admin.app().delete();
+        return;
+      }
+      if (RUN_ONCE_ROUND_DELAY_MS) await sleep(RUN_ONCE_ROUND_DELAY_MS);
+      continue;
     }
 
     const nextSourceAt = Math.min(...sources.map((source) => source.nextFetchAt || now + 5000));

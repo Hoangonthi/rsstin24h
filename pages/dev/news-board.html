@@ -3,34 +3,168 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>News Board 24h</title>
+  <title>News Board 48h</title>
+  <link rel="icon" href="data:,">
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script>
+    window.NEW24H_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyAUe8yrOLxAabvLx6thP4rpt2mgg-PzU3Q",
+      authDomain: "rsstin24h.firebaseapp.com",
+      projectId: "rsstin24h",
+      storageBucket: "rsstin24h.firebasestorage.app",
+      messagingSenderId: "515043893819",
+    };
+  </script>
   <link rel="stylesheet" href="../../css/dev/news-board.css" />
 </head>
 <body>
   <div class="page-shell">
     <header class="page-header">
       <div>
-        <p class="eyebrow">News Board 24h</p>
-        <h1>News Board 24h</h1>
+        <p class="eyebrow">News Board 48h</p>
+        <h1>News Board 48h</h1>
         <p class="subtext">Tin trong nước và tin nước ngoài theo dõi nhanh</p>
       </div>
       <div class="action-group">
-        <button id="load-news-btn" class="primary">Lấy tin 24h</button>
+        <button id="load-news-btn" class="primary">Lấy tin 48h</button>
         <button id="refresh-news-btn">Làm mới</button>
         <button id="mock-news-btn">Dùng mock</button>
+        <button id="admin-signin-btn">Đăng nhập admin</button>
+        <button id="admin-signout-btn">Đăng xuất</button>
       </div>
     </header>
 
-    <div class="tab-row" id="category-tabs">
-      <button class="tab-button active" data-category="all">All</button>
-      <button class="tab-button" data-category="market">Market</button>
-      <button class="tab-button" data-category="stocks">Stocks</button>
-      <button class="tab-button" data-category="macro">Macro</button>
-      <button class="tab-button" data-category="company">Company</button>
-      <button class="tab-button" data-category="research">Research</button>
+    <div class="tab-row app-tabs" id="app-tabs">
+      <button class="tab-button active" data-view="board">Bảng tin</button>
+      <a class="tab-button ops-link" href="/pages/news-ops.html">Thêm tin thủ công ở News Ops</a>
     </div>
 
-    <div class="status-line" id="status-line">Bấm “Lấy tin 24h” để tải dữ liệu.</div>
+    <section id="board-panel" class="app-panel">
+      <div class="tab-row" id="category-tabs">
+        <button class="tab-button active" data-category="all">All</button>
+        <button class="tab-button" data-category="market">Market</button>
+        <button class="tab-button" data-category="stocks">Stocks</button>
+        <button class="tab-button" data-category="macro">Macro</button>
+        <button class="tab-button" data-category="company">Company</button>
+        <button class="tab-button" data-category="research">Research</button>
+      </div>
+
+      <section class="filter-panel" aria-label="Market Intelligence filters">
+        <label>
+          <span>Mã chính</span>
+          <input id="filter-primary-ticker" type="search" placeholder="VD: HPG" autocomplete="off" />
+        </label>
+        <label>
+          <span>Mã liên quan</span>
+          <input id="filter-related-ticker" type="search" placeholder="VD: HSG" autocomplete="off" />
+        </label>
+        <label>
+          <span>Event</span>
+          <select id="filter-event-type">
+            <option value="">Tất cả</option>
+          </select>
+        </label>
+        <label>
+          <span>Impact</span>
+          <select id="filter-impact-level">
+            <option value="">Tất cả</option>
+          </select>
+        </label>
+        <label>
+          <span>Sentiment</span>
+          <select id="filter-sentiment">
+            <option value="">Tất cả</option>
+          </select>
+        </label>
+        <label>
+          <span>Horizon</span>
+          <select id="filter-horizon">
+            <option value="">Tất cả</option>
+          </select>
+        </label>
+        <button id="clear-filters-btn" type="button">Xóa lọc</button>
+      </section>
+    </section>
+
+    <section id="manual-panel" class="manual-panel app-panel" hidden>
+      <div class="manual-layout">
+        <form id="manual-news-form" class="manual-form">
+          <input id="manual-news-id" type="hidden" />
+          <label class="full">
+            <span>Link bài viết</span>
+            <div class="input-row">
+              <input id="manual-url" type="url" placeholder="https://..." autocomplete="off" required />
+              <button id="manual-paste-btn" type="button">Dán nhanh</button>
+              <button id="manual-fetch-meta-btn" type="button">Lấy thông tin</button>
+            </div>
+          </label>
+
+          <div class="manual-quick-card full">
+            <label>
+              <span>Tiêu đề</span>
+              <input id="manual-title" type="text" placeholder="Tự lấy từ link, có thể sửa" />
+            </label>
+            <label>
+              <span>Nguồn</span>
+              <input id="manual-source" type="text" placeholder="Tự nhận diện, có thể sửa" />
+            </label>
+            <label class="full">
+              <span>Tóm tắt ngắn</span>
+              <textarea id="manual-summary" placeholder="Tự lấy meta description nếu có; có thể nhập tay"></textarea>
+            </label>
+          </div>
+
+          <details class="manual-advanced full">
+            <summary>Nâng cao</summary>
+            <div class="manual-advanced-grid">
+              <label>
+                <span>Thời gian đăng</span>
+                <input id="manual-published-at" type="datetime-local" />
+              </label>
+              <label>
+                <span>Trạng thái</span>
+                <select id="manual-status">
+                  <option value="published">published</option>
+                  <option value="draft">draft</option>
+                  <option value="hidden">hidden</option>
+                </select>
+              </label>
+              <label>
+                <span>Mã cổ phiếu liên quan</span>
+                <input id="manual-tickers" type="text" placeholder="HPG, HSG, SSI" />
+              </label>
+              <label>
+                <span>Ngành liên quan</span>
+                <input id="manual-sectors" type="text" placeholder="thép, chứng khoán" />
+              </label>
+              <label class="full">
+                <span>Ghi chú admin</span>
+                <textarea id="manual-admin-note" placeholder="Ghi chú nội bộ"></textarea>
+              </label>
+            </div>
+          </details>
+
+          <div class="manual-analysis" id="manual-analysis-preview">Chưa phân tích.</div>
+          <div class="manual-actions">
+            <button id="manual-save-btn" type="submit" class="primary">Lưu & xuất bản</button>
+            <button id="manual-save-draft-btn" type="button">Lưu nháp</button>
+            <button id="manual-reanalyze-btn" type="button">Phân tích lại</button>
+            <button id="manual-reset-btn" type="button">Reset form</button>
+          </div>
+        </form>
+        <aside class="manual-list-panel">
+          <div class="column-header">
+            <h2>Tin thủ công</h2>
+            <span class="column-count" id="manual-count">0 tin</span>
+          </div>
+          <ul class="manual-list" id="manual-news-list"></ul>
+        </aside>
+      </div>
+    </section>
+
+    <div class="status-line" id="status-line">Bấm “Lấy tin 48h” để tải dữ liệu.</div>
 
     <main class="news-columns">
       <section class="news-column">
@@ -52,6 +186,7 @@
   </div>
 
   <script src="../../js/core/newsSources.js"></script>
+  <script src="../../public/js/localTranslator.js?v=local-translate-20260527"></script>
   <script src="../../js/core/mock/mockNewsBoard.js"></script>
   <script src="../../js/core/services/simpleNewsBoardService.js"></script>
   <script src="../../js/core/dev/news-board.js"></script>
