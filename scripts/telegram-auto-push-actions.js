@@ -1,10 +1,10 @@
 const https = require("https");
 const admin = require("firebase-admin");
 
-const AUTO_DEDUPE_WINDOW_MS = Number(process.env.TELEGRAM_AUTO_DEDUPE_HOURS || 24) * 60 * 60 * 1000;
-const AUTO_GROUP_COOLDOWN_MS = Number(process.env.TELEGRAM_AUTO_GROUP_COOLDOWN_MS || 2 * 60 * 1000);
 const MAX_NEWS_ITEMS = Math.max(1, Number(process.env.TELEGRAM_AUTO_MAX_NEWS || 120));
-const MAX_PUSHES_PER_RUN = Math.max(1, Number(process.env.TELEGRAM_AUTO_MAX_PUSHES || 2));
+const MAX_PUSHES_PER_RUN = Math.min(10, Math.max(5, Number(process.env.TELEGRAM_AUTO_MAX_PUSHES || 8)));
+const PUSH_DELAY_MIN_MS = Math.max(0, Number(process.env.TELEGRAM_AUTO_DELAY_MIN_MS || 10 * 1000));
+const PUSH_DELAY_MAX_MS = Math.max(PUSH_DELAY_MIN_MS, Number(process.env.TELEGRAM_AUTO_DELAY_MAX_MS || 30 * 1000));
 const DRY_RUN = process.env.TELEGRAM_AUTO_DRY_RUN === "true";
 const RESPECT_FIRESTORE_SETTING = process.env.TELEGRAM_AUTO_RESPECT_SETTING !== "false";
 
@@ -55,6 +55,14 @@ function listValues(item, fields) {
 function hasAnyText(text, keywords) {
   const normalized = normalizeText(text);
   return keywords.some((keyword) => normalized.includes(normalizeText(keyword)));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function randomDelayMs() {
+  return PUSH_DELAY_MIN_MS + Math.floor(Math.random() * (PUSH_DELAY_MAX_MS - PUSH_DELAY_MIN_MS + 1));
 }
 
 function dateFromFirestore(value) {
@@ -256,32 +264,10 @@ async function loadRecentNews(db) {
     .orderBy("createdAt", "desc")
     .limit(MAX_NEWS_ITEMS)
     .get();
-  return snapshot.docs.map((doc) => normalizeAutoItem(doc.id, doc.data()));
-}
-
-async function loadRecentLogs(db) {
-  const cutoff = new Date(Date.now() - AUTO_DEDUPE_WINDOW_MS);
-  const snapshot = await db.collection("telegram_auto_push_logs")
-    .orderBy("pushedAt", "desc")
-    .limit(1000)
-    .get();
-  return snapshot.docs
-    .map((doc) => ({id: doc.id, ...doc.data()}))
-    .filter((row) => {
-      const pushedAt = dateFromFirestore(row.pushedAt);
-      return pushedAt && pushedAt.getTime() >= cutoff.getTime();
-    });
-}
-
-function hasRecentAutoPush(logs, key) {
-  return logs.some((row) => row.key === key && row.status === "success");
-}
-
-function hasRecentGroupPush(logs, target) {
-  const cutoff = Date.now() - AUTO_GROUP_COOLDOWN_MS;
-  return logs.some((row) => row.targetChatId === target.chatId
-    && row.status === "success"
-    && (dateFromFirestore(row.pushedAt)?.getTime() || 0) >= cutoff);
+  return snapshot.docs.map((doc) => ({
+    ref: doc.ref,
+    ...normalizeAutoItem(doc.id, doc.data()),
+  }));
 }
 
 async function writeLog(db, logRow) {
@@ -289,6 +275,23 @@ async function writeLog(db, logRow) {
     ...logRow,
     pushedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+}
+
+async function markSentToTelegram(item, rows) {
+  if (DRY_RUN || !rows.length) return;
+  await item.ref.set({
+    sentToTelegram: true,
+    sentAt: admin.firestore.FieldValue.serverTimestamp(),
+    telegramAutoPush: {
+      runner: "github_actions",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      targets: rows.map((row) => ({
+        group: row.targetGroup,
+        chatId: row.targetChatId,
+        messageId: row.messageId || null,
+      })),
+    },
+  }, {merge: true});
 }
 
 async function main() {
@@ -302,35 +305,32 @@ async function main() {
     return;
   }
 
-  const [items, logs] = await Promise.all([
-    loadRecentNews(db),
-    loadRecentLogs(db),
-  ]);
+  const items = await loadRecentNews(db);
   const pushed = [];
   const skipped = [];
-  const pushedGroups = new Set();
 
   for (const item of items) {
     if (pushed.length >= MAX_PUSHES_PER_RUN) break;
+    if (item.sentToTelegram === true || item.sentAt) {
+      skipped.push({newsId: item.newsId, reason: "already_sent_to_telegram"});
+      continue;
+    }
     const targets = classifyAutoTargets(item);
     if (!targets.length) {
       skipped.push({newsId: item.newsId, reason: "no_matching_group"});
       continue;
     }
+    const pushedForItem = [];
     for (const target of targets) {
       if (pushed.length >= MAX_PUSHES_PER_RUN) break;
-      if (pushedGroups.has(target.chatId) || hasRecentGroupPush(logs, target)) {
-        skipped.push({newsId: item.newsId, targetGroup: target.name, reason: "group_cooldown"});
-        continue;
-      }
-      const key = dedupeKey(item, target);
-      if (hasRecentAutoPush(logs, key)) {
-        skipped.push({newsId: item.newsId, targetGroup: target.name, reason: "duplicate_24h"});
-        continue;
+      if (pushed.length > 0 && !DRY_RUN) {
+        const delayMs = randomDelayMs();
+        console.log(`[AUTO] delaying ${Math.round(delayMs / 1000)}s before next Telegram message`);
+        await sleep(delayMs);
       }
 
       const logRow = {
-        key,
+        key: dedupeKey(item, target),
         newsId: item.newsId,
         title: item.title,
         link: item.link,
@@ -346,20 +346,24 @@ async function main() {
         logRow.status = DRY_RUN ? "dry_run" : "success";
         logRow.messageId = messageId;
         pushed.push(logRow);
-        pushedGroups.add(target.chatId);
+        pushedForItem.push(logRow);
       } catch (error) {
         logRow.status = "error";
         logRow.errorMessage = error.message || String(error);
         skipped.push({newsId: item.newsId, targetGroup: target.name, reason: logRow.errorMessage});
       }
       await writeLog(db, logRow);
-      logs.push({...logRow, pushedAt: new Date()});
     }
+    await markSentToTelegram(item, pushedForItem);
   }
 
-  console.log(`[AUTO] scanned=${items.length} pushed=${pushed.length} skipped=${skipped.length} dryRun=${DRY_RUN}`);
+  console.log(`[AUTO] scanned=${items.length} pushed=${pushed.length} skipped=${skipped.length} maxPushes=${MAX_PUSHES_PER_RUN} dryRun=${DRY_RUN}`);
   for (const row of pushed) {
     console.log(`[AUTO] pushed ${row.targetGroup}: ${row.title}`);
+  }
+  for (const row of skipped) {
+    const targetText = row.targetGroup ? ` target=${row.targetGroup}` : "";
+    console.log(`[AUTO] skipped newsId=${row.newsId || ""}${targetText} reason=${row.reason}`);
   }
 }
 
