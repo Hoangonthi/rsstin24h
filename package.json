@@ -10,6 +10,7 @@
     "archive:daily:email": "node scripts/daily-news-archive.js --email",
     "telegram-server": "node telegram-local-server.js",
     "telegram-auto": "node telegram-local-server.js",
+    "telegram:auto-push:actions": "node scripts/telegram-auto-push-actions.js",
     "local-auto": "node scripts/local-auto-runner.js",
     "deploy:free": "firebase deploy --only firestore,hosting"
   },

@@ -21,6 +21,10 @@ jobs:
     env:
       FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
       FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_AUTO_PUSH_ENABLED: "true"
+      TELEGRAM_AUTO_MAX_NEWS: "120"
+      TELEGRAM_AUTO_MAX_PUSHES: "2"
       WATCHER_MAX_ITEMS: "20"
       WATCHER_CATEGORY_BASE_MINUTES: "6"
       WATCHER_FETCH_TIMEOUT_MS: "12000"
@@ -50,6 +54,10 @@ jobs:
             echo "::error::Missing GitHub Secret FIREBASE_SERVICE_ACCOUNT_JSON"
             exit 1
           fi
+          if [ -z "${TELEGRAM_BOT_TOKEN:-}" ]; then
+            echo "::error::Missing GitHub Secret TELEGRAM_BOT_TOKEN"
+            exit 1
+          fi
 
       - name: Install deps
         run: npm ci
@@ -60,4 +68,12 @@ jobs:
           set -euo pipefail
           echo "::group::RSS collector"
           npm run rss
+          echo "::endgroup::"
+
+      - name: Auto push Telegram
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "::group::Telegram auto push"
+          npm run telegram:auto-push:actions
           echo "::endgroup::"

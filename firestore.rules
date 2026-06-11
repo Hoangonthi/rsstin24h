@@ -154,6 +154,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /telegram_auto_push_logs/{logId} {
+      allow read: if isNewsOpsAdmin();
+      allow write: if false;
+    }
+
     match /telegram_settings/{settingId} {
       allow read: if isNewsOpsAdmin();
       allow create, update: if isNewsOpsAdmin()
