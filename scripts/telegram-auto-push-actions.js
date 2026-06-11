@@ -2,7 +2,8 @@ const https = require("https");
 const admin = require("firebase-admin");
 
 const MAX_NEWS_ITEMS = Math.max(1, Number(process.env.TELEGRAM_AUTO_MAX_NEWS || 120));
-const MAX_PUSHES_PER_RUN = Math.min(10, Math.max(5, Number(process.env.TELEGRAM_AUTO_MAX_PUSHES || 8)));
+const MAX_PUSHES_PER_RUN = Math.min(10, Math.max(5, Number(process.env.TELEGRAM_AUTO_MAX_PUSHES || 10)));
+const MAX_PUSHES_PER_GROUP = Math.min(10, Math.max(1, Number(process.env.TELEGRAM_AUTO_MAX_PUSHES_PER_GROUP || 5)));
 const PUSH_DELAY_MIN_MS = Math.max(0, Number(process.env.TELEGRAM_AUTO_DELAY_MIN_MS || 10 * 1000));
 const PUSH_DELAY_MAX_MS = Math.max(PUSH_DELAY_MIN_MS, Number(process.env.TELEGRAM_AUTO_DELAY_MAX_MS || 30 * 1000));
 const DRY_RUN = process.env.TELEGRAM_AUTO_DRY_RUN === "true";
@@ -277,19 +278,37 @@ async function writeLog(db, logRow) {
   });
 }
 
+function sentTargetChatIds(item) {
+  const targets = item.telegramAutoPush && Array.isArray(item.telegramAutoPush.targets)
+    ? item.telegramAutoPush.targets
+    : [];
+  return new Set(targets.map((target) => textValue(target.chatId)).filter(Boolean));
+}
+
 async function markSentToTelegram(item, rows) {
   if (DRY_RUN || !rows.length) return;
+  const existingTargets = item.telegramAutoPush && Array.isArray(item.telegramAutoPush.targets)
+    ? item.telegramAutoPush.targets
+    : [];
+  const targetMap = new Map();
+  for (const target of existingTargets) {
+    const chatId = textValue(target && target.chatId);
+    if (chatId) targetMap.set(chatId, target);
+  }
+  for (const row of rows) {
+    targetMap.set(row.targetChatId, {
+      group: row.targetGroup,
+      chatId: row.targetChatId,
+      messageId: row.messageId || null,
+    });
+  }
   await item.ref.set({
     sentToTelegram: true,
     sentAt: admin.firestore.FieldValue.serverTimestamp(),
     telegramAutoPush: {
       runner: "github_actions",
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      targets: rows.map((row) => ({
-        group: row.targetGroup,
-        chatId: row.targetChatId,
-        messageId: row.messageId || null,
-      })),
+      targets: Array.from(targetMap.values()),
     },
   }, {merge: true});
 }
@@ -308,21 +327,32 @@ async function main() {
   const items = await loadRecentNews(db);
   const pushed = [];
   const skipped = [];
+  const pushedByGroup = new Map();
 
   for (const item of items) {
     if (pushed.length >= MAX_PUSHES_PER_RUN) break;
-    if (item.sentToTelegram === true || item.sentAt) {
-      skipped.push({newsId: item.newsId, reason: "already_sent_to_telegram"});
-      continue;
-    }
     const targets = classifyAutoTargets(item);
     if (!targets.length) {
       skipped.push({newsId: item.newsId, reason: "no_matching_group"});
       continue;
     }
+    const sentTargets = sentTargetChatIds(item);
+    if (item.sentToTelegram === true && !sentTargets.size) {
+      skipped.push({newsId: item.newsId, reason: "already_sent_to_telegram_legacy"});
+      continue;
+    }
     const pushedForItem = [];
     for (const target of targets) {
       if (pushed.length >= MAX_PUSHES_PER_RUN) break;
+      if (sentTargets.has(target.chatId)) {
+        skipped.push({newsId: item.newsId, targetGroup: target.name, reason: "already_sent_to_group"});
+        continue;
+      }
+      const groupPushCount = pushedByGroup.get(target.chatId) || 0;
+      if (groupPushCount >= MAX_PUSHES_PER_GROUP) {
+        skipped.push({newsId: item.newsId, targetGroup: target.name, reason: "group_quota_reached"});
+        continue;
+      }
       if (pushed.length > 0 && !DRY_RUN) {
         const delayMs = randomDelayMs();
         console.log(`[AUTO] delaying ${Math.round(delayMs / 1000)}s before next Telegram message`);
@@ -347,6 +377,7 @@ async function main() {
         logRow.messageId = messageId;
         pushed.push(logRow);
         pushedForItem.push(logRow);
+        pushedByGroup.set(target.chatId, groupPushCount + 1);
       } catch (error) {
         logRow.status = "error";
         logRow.errorMessage = error.message || String(error);
@@ -357,7 +388,7 @@ async function main() {
     await markSentToTelegram(item, pushedForItem);
   }
 
-  console.log(`[AUTO] scanned=${items.length} pushed=${pushed.length} skipped=${skipped.length} maxPushes=${MAX_PUSHES_PER_RUN} dryRun=${DRY_RUN}`);
+  console.log(`[AUTO] scanned=${items.length} pushed=${pushed.length} skipped=${skipped.length} maxPushes=${MAX_PUSHES_PER_RUN} maxPerGroup=${MAX_PUSHES_PER_GROUP} dryRun=${DRY_RUN}`);
   for (const row of pushed) {
     console.log(`[AUTO] pushed ${row.targetGroup}: ${row.title}`);
   }
